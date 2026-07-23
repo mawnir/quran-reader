@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-amiri: 'Amiri', serif;
+  --font-amiri-quran: 'Amiri Quran', serif;
+  
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-hover: var(--bg-hover);
+  
+  --color-border-subtle: var(--border-subtle);
+  --color-border-input: var(--border-input);
+  
+  --color-text-base: var(--text-base);
+  --color-text-heading: var(--text-heading);
+  --color-text-muted: var(--text-muted);
+  --color-text-tafsir: var(--text-tafsir);
+  
+  --color-accent: var(--accent);
+}
+
+@layer base {
+  :root {
+    --bg-base: #fbf9f4;
+    --bg-surface: #f5f2ed;
+    --bg-hover: #ece8df;
+    --border-subtle: #e6e2d3;
+    --border-input: #dfd7c2;
+    --text-base: #2c2c2c;
+    --text-heading: #3a3a2e;
+    --text-muted: #8b7d6b;
+    --text-tafsir: #5a5a40;
+    --accent: #10b981;
+  }
+
+  .dark {
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-hover: #334155;
+    --border-subtle: #334155;
+    --border-input: #475569;
+    --text-base: #cbd5e1;
+    --text-heading: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-tafsir: #cbd5e1;
+    --accent: #10b981;
+  }
+}

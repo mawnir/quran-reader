@@ -1,0 +1,6 @@
+{
+  "name": "Quran Reader",
+  "description": "A beautiful Quran reader featuring Uthmani text, complete with Surah navigation and full-text search.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
