@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Quran Reader
 
-# Run and deploy your AI Studio app
+A clean, modern web application for reading the Holy Quran with Uthmani typography, page-by-page reading, touch swipe gestures, Hizb & progress tracking, and dark mode support.
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/4dad611e-b4ad-4078-975c-2b86c0e44ed6
+- 📖 **Page-by-Page Reading**: Read Surahs paginated according to the traditional Mus-haf layout.
+- 📱 **Touch & Swipe Navigation**: Swipe left/right on mobile and desktop to turn pages.
+- 📊 **Reading Indicators**: Real-time display of current Hizb number and Surah completion percentage.
+- 🔍 **Arabic Verse Search**: Real-time search across all 114 Surahs.
+- 🌙 **Dark Mode Support**: Seamless dark/light theme switching.
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- **React 19** + **TypeScript**
+- **Vite**
+- **Tailwind CSS v4**
+- **Framer Motion** (`motion`)
+- **Lucide Icons**
 
+## Getting Started
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Install dependencies**:
+   ```bash
+   bun install
+   # or
+   npm install
+   ```
+
+2. **Run the development server**:
+   ```bash
+   bun dev
+   # or
+   npm run dev
+   ```
+
+3. Open `http://localhost:3000` in your browser.
