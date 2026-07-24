@@ -248,15 +248,15 @@ export default function App() {
                   setSelectedSurah(null);
                   setCurrentPageIndex(0);
                 }}
-                className="flex items-center gap-2 text-text-muted hover:text-text-heading font-medium transition-colors border border-border-subtle bg-bg-surface px-4 py-2 rounded-full hover:bg-bg-hover"
+                className="flex items-center gap-2 text-text-muted hover:text-text-heading font-medium transition-colors border border-border-subtle bg-bg-surface px-4 py-1 md:py-2 mt-2 rounded-full hover:bg-bg-hover"
               >
                 <ArrowLeft className="w-5 h-5" />
-                Back to Surahs
+                <span className="hidden md:block">Back to Surahs</span>
               </button>
 
               {currentPageIndex !== 0 && (
                 <div className="flex items-center gap-3">
-                  <div className="flex mt-4 items-center gap-2 text-xs md:text-sm font-medium text-text-muted bg-bg-surface border border-border-subtle px-3 py-1.5 rounded-full shadow-sm">
+                  <div className="flex mt-2 items-center gap-2 text-xs md:text-sm font-medium text-text-muted bg-bg-surface border border-border-subtle px-3 py-1.5 rounded-full shadow-sm">
                     {currentHizb && (
                       <>
                         <span>Hizb {currentHizb}</span>
@@ -293,7 +293,7 @@ export default function App() {
                 {/* Bismillah for all surahs except At-Tawbah (9) and Al-Fatihah (1) which has it as verse 1 */}
                 {selectedSurah !== 9 && selectedSurah !== 1 && (
                   <div className="text-center mb-10 mt-6">
-                    <p className="text-4xl font-amiri-quran text-text-heading">
+                    <p className="text-4xl font-hafs-uthmanic text-text-heading">
                       بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                     </p>
                     <div className="w-16 h-0.5 bg-accent mx-auto mt-4 opacity-30" />
@@ -305,24 +305,13 @@ export default function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentPageIndex}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(e, { offset, velocity }) => {
-                  const swipe = Math.abs(offset.x) * velocity.x;
-                  if (swipe < -10000 || offset.x < -50) {
-                    handlePrevPage(); // Swipe left -> prev page (Arabic reading direction)
-                  } else if (swipe > 10000 || offset.x > 50) {
-                    handleNextPage(); // Swipe right -> next page
-                  }
-                }}
-                className="bg-bg-surface p-8 md:p-12 rounded-3xl shadow-sm border border-border-subtle mb-8 cursor-grab active:cursor-grabbing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="p-0.5 md:p-12 mb-4 select-text"
               >
-                <p className="font-amiri text-[1.5rem] md:text-3xl leading-[2.5] md:leading-[3] text-text-base text-justify" dir="rtl">
+                <p className="font-hafs-uthmanic text-[1.5rem] md:text-3xl leading-[2.5] md:leading-[3] text-text-base text-justify" dir="rtl">
                   {versesOnCurrentPage.map((verse) => (
                     <React.Fragment key={verse.verse}>
                       <span className="inline">{verse.text}</span>

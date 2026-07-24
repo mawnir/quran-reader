@@ -1,22 +1,31 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'hafs-uthmanic-v14-full';
+  src: url('https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/fonts/hafs-uthmanic-v14-full.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-hafs-uthmanic: 'hafs-uthmanic-v14-full', serif;
   --font-amiri: 'Amiri', serif;
   --font-amiri-quran: 'Amiri Quran', serif;
-  
+
   --color-bg-base: var(--bg-base);
   --color-bg-surface: var(--bg-surface);
   --color-bg-hover: var(--bg-hover);
-  
+
   --color-border-subtle: var(--border-subtle);
   --color-border-input: var(--border-input);
-  
+
   --color-text-base: var(--text-base);
   --color-text-heading: var(--text-heading);
   --color-text-muted: var(--text-muted);
   --color-text-tafsir: var(--text-tafsir);
-  
+
   --color-accent: var(--accent);
 }
 
