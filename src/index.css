@@ -29,18 +29,22 @@
   --color-accent: var(--accent);
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
-    --bg-base: #fbf9f4;
-    --bg-surface: #f5f2ed;
-    --bg-hover: #ece8df;
-    --border-subtle: #e6e2d3;
-    --border-input: #dfd7c2;
-    --text-base: #2c2c2c;
-    --text-heading: #3a3a2e;
-    --text-muted: #8b7d6b;
-    --text-tafsir: #5a5a40;
-    --accent: #10b981;
+    --bg-base: #ffffff;
+    /* Crisp pure white background */
+    --bg-surface: #f8fafc;
+    /* Clean light surface */
+    --bg-hover: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-input: #cbd5e1;
+    --text-base: #334155;
+    --text-heading: #0f172a;
+    --text-muted: #64748b;
+    --text-tafsir: #475569;
+    --accent: #059669;
   }
 
   .dark {
