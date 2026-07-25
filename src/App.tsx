@@ -184,52 +184,54 @@ export default function App() {
     return chapters.find((c) => c.chapter === selectedSurah);
   }, [selectedSurah, chapters]);
 
+  // Split Surah verses into pages of ~100 words each
   const activeSurahPages = useMemo(() => {
-    if (!activeSurahInfo || !activeSurahInfo.verses) return [];
-    const pages = new Set<number>();
-    activeSurahInfo.verses.forEach((v) => pages.add(v.page));
-    return Array.from(pages).sort((a, b) => a - b);
-  }, [activeSurahInfo]);
+    if (!activeSurahVerses.length) return [];
 
-  const currentSurahPageNumber = activeSurahPages[currentPageIndex] || null;
+    const pages: Verse[][] = [];
+    let currentChunk: Verse[] = [];
+    let currentWordCount = 0;
 
-  const currentVerseInfo = useMemo(() => {
-    if (!activeSurahInfo?.verses || !currentSurahPageNumber) return null;
-    return activeSurahInfo.verses.find((v) => v.page === currentSurahPageNumber);
-  }, [activeSurahInfo, currentSurahPageNumber]);
+    for (const verse of activeSurahVerses) {
+      const verseWordCount = verse.text.trim().split(/\s+/).filter(Boolean).length;
+      if (currentChunk.length > 0 && currentWordCount + verseWordCount > 100) {
+        pages.push(currentChunk);
+        currentChunk = [verse];
+        currentWordCount = verseWordCount;
+      } else {
+        currentChunk.push(verse);
+        currentWordCount += verseWordCount;
+      }
+    }
+    if (currentChunk.length > 0) {
+      pages.push(currentChunk);
+    }
+    return pages;
+  }, [activeSurahVerses]);
 
-  const currentHizb = useMemo(() => {
-    if (!currentVerseInfo?.maqra) return null;
-    return Math.ceil(currentVerseInfo.maqra / 4);
-  }, [currentVerseInfo]);
+  const totalPages = activeSurahPages.length;
+  const safePageIndex = Math.min(currentPageIndex, Math.max(0, totalPages - 1));
 
   const surahProgressPercent = useMemo(() => {
-    if (!activeSurahPages.length) return 0;
-    return Math.round(((currentPageIndex + 1) / activeSurahPages.length) * 100);
-  }, [currentPageIndex, activeSurahPages.length]);
+    if (!totalPages) return 0;
+    return Math.round(((safePageIndex + 1) / totalPages) * 100);
+  }, [safePageIndex, totalPages]);
 
   const versesOnCurrentPage = useMemo(() => {
-    if (!activeSurahInfo?.verses || activeSurahPages.length === 0) return activeSurahVerses;
-
-    const verseNumbers = new Set(
-      activeSurahInfo.verses
-        .filter((v) => v.page === currentSurahPageNumber)
-        .map((v) => v.verse)
-    );
-
-    return activeSurahVerses.filter((v) => verseNumbers.has(v.verse));
-  }, [activeSurahVerses, activeSurahInfo, currentSurahPageNumber, activeSurahPages]);
+    if (!totalPages) return [];
+    return activeSurahPages[safePageIndex] || [];
+  }, [activeSurahPages, safePageIndex, totalPages]);
 
   const handleNextPage = () => {
-    if (currentPageIndex < activeSurahPages.length - 1) {
-      setCurrentPageIndex((prev) => prev + 1);
+    if (safePageIndex < totalPages - 1) {
+      setCurrentPageIndex(safePageIndex + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handlePrevPage = () => {
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex((prev) => prev - 1);
+    if (safePageIndex > 0) {
+      setCurrentPageIndex(safePageIndex - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -284,12 +286,8 @@ export default function App() {
                 </span>
 
                 <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted bg-bg-hover/60 border border-border-subtle px-2.5 py-1 rounded-full flex-shrink-0">
-                  {currentHizb && (
-                    <>
-                      <span>الحزب {new Intl.NumberFormat('ar-EG').format(currentHizb)}</span>
-                      <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
-                    </>
-                  )}
+                  <span>صفحة {new Intl.NumberFormat('ar-EG').format(safePageIndex + 1)} من {new Intl.NumberFormat('ar-EG').format(totalPages)}</span>
+                  <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
                   <span>{new Intl.NumberFormat('ar-EG').format(surahProgressPercent)}٪</span>
                 </div>
               </div>
@@ -399,7 +397,7 @@ export default function App() {
                 transition={{ duration: 0.15 }}
                 className="bg-bg-surface border border-border-subtle rounded-2xl p-1 sm:p-8 md:p-12 shadow-xs mb-8"
               >
-                <p className="font-hafs-uthmanic text-2xl sm:text-2xl md:text-3xl leading-[2.3] sm:leading-[2.6] md:leading-[2.8] text-text-base text-justify">
+                <p className="font-hafs-uthmanic font-bold text-2xl sm:text-2xl md:text-3xl leading-[2.3] sm:leading-[2.6] md:leading-[2.8] text-text-base text-justify">
                   {versesOnCurrentPage.map((verse) => (
                     <React.Fragment key={verse.verse}>
                       <span className="inline">{verse.text}</span>
@@ -413,31 +411,31 @@ export default function App() {
             </AnimatePresence>
 
             {/* Bottom Page Navigation */}
-            {activeSurahPages.length > 1 && (
+            {totalPages > 1 && (
               <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 w-[calc(100%-2rem)] max-w-md bg-bg-surface/95 backdrop-blur-md border border-border-subtle p-2.5 rounded-full shadow-lg flex items-center justify-between">
                 <button
                   onClick={handlePrevPage}
-                  disabled={currentPageIndex === 0}
+                  disabled={safePageIndex === 0}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-text-heading text-xs sm:text-sm font-medium"
                 >
                   <ChevronRight className="w-5 h-5" />
-                  <span className="hidden xs:inline">التالية</span>
+                  <span className="hidden xs:inline">السابقة</span>
                 </button>
 
                 <div className="text-xs sm:text-sm font-medium text-text-muted flex items-center gap-2">
-                  <span>صفحة {new Intl.NumberFormat('ar-EG').format(currentSurahPageNumber || 1)}</span>
+                  <span>صفحة {new Intl.NumberFormat('ar-EG').format(safePageIndex + 1)}</span>
                   <span className="w-1 h-1 rounded-full bg-border-input" />
                   <span>
-                    {new Intl.NumberFormat('ar-EG').format(currentPageIndex + 1)} / {new Intl.NumberFormat('ar-EG').format(activeSurahPages.length)}
+                    {new Intl.NumberFormat('ar-EG').format(safePageIndex + 1)} / {new Intl.NumberFormat('ar-EG').format(totalPages)}
                   </span>
                 </div>
 
                 <button
                   onClick={handleNextPage}
-                  disabled={currentPageIndex === activeSurahPages.length - 1}
+                  disabled={safePageIndex === totalPages - 1}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-bg-hover disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-text-heading text-xs sm:text-sm font-medium"
                 >
-                  <span className="hidden xs:inline">السابقة</span>
+                  <span className="hidden xs:inline">التالية</span>
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               </div>
