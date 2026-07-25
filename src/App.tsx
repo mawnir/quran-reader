@@ -12,6 +12,18 @@ interface HizbEntry {
   verse: number;
 }
 
+// Strips Arabic diacritics (tashkeel) and unifies common letter variants
+// so searches match regardless of diacritics/hamza differences.
+const normalizeArabic = (text: string) => {
+  return text
+    .replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u08D4-\u08E1\u08E3-\u08FF]/g, '') // diacritics
+    .replace(/\u0640/g, '') // tatweel
+    .replace(/[إأآا]/g, 'ا') // unify alef forms
+    .replace(/ى/g, 'ي') // alef maksura -> ya
+    .replace(/ة/g, 'ه') // ta marbuta -> ha
+    .trim();
+};
+
 // Helper to normalize strings for flexible URL matching
 const normalizeForMatch = (text: string) => {
   return text
@@ -80,6 +92,44 @@ const VerseItem: React.FC<VerseItemProps> = ({ verse, number, surahName }) => {
         </div>
       </div>
     </div>
+  );
+};
+
+interface SurahCardProps {
+  chapter: ChapterInfo;
+  totalVerses: number;
+  onSelect: (chapter: ChapterInfo) => void;
+}
+
+const SurahCard: React.FC<SurahCardProps> = ({ chapter, totalVerses, onSelect }) => {
+  return (
+    <button
+      onClick={() => onSelect(chapter)}
+      className="bg-bg-surface p-4 rounded-2xl border border-border-subtle hover:border-accent/60 hover:bg-bg-hover transition-all group flex items-center justify-between text-right shadow-xs active:scale-[0.99]"
+    >
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div className="relative flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center">
+          <div className="absolute inset-0 bg-bg-base border border-border-subtle rounded-xl rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+          <span className="relative z-10 text-xs sm:text-sm text-text-heading font-bold font-sans">
+            {new Intl.NumberFormat('ar-EG').format(chapter.chapter)}
+          </span>
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-bold text-base sm:text-lg text-text-heading font-hafs-uthmanic truncate">
+            سورة {chapter.arabicname.replace('سُوْرَةُ ', '')}
+          </h3>
+          <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1.5 font-sans">
+            <span>{chapter.revelation === 'Meccan' ? 'مكية' : 'مدنية'}</span>
+            <span>•</span>
+            <span>{new Intl.NumberFormat('ar-EG').format(totalVerses)} آية</span>
+          </p>
+        </div>
+      </div>
+
+      <span className="text-xs text-text-muted font-sans group-hover:text-accent transition-colors">
+        {chapter.englishname}
+      </span>
+    </button>
   );
 };
 
@@ -171,11 +221,37 @@ export default function App() {
     setCurrentPageIndex(0);
   };
 
+  const handleSelectSurahFromSearch = (chapter: ChapterInfo) => {
+    navigateToSurah(chapter);
+    setSearchQuery('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Precompute normalized (diacritic-stripped) verse text once per data load,
+  // instead of re-normalizing thousands of verses on every keystroke.
+  const normalizedVerses = useMemo(() => {
+    return verses.map((v) => ({ ...v, normalizedText: normalizeArabic(v.text) }));
+  }, [verses]);
+
+  // Surahs matching the query by Arabic name or English transliteration
+  const matchingSurahs = useMemo(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return [];
+    const query = trimmed.toLowerCase();
+    const normalizedQuery = normalizeArabic(trimmed);
+    return chapters.filter((c) => {
+      const englishMatch = c.englishname.toLowerCase().includes(query);
+      const arabicMatch = normalizeArabic(c.arabicname).includes(normalizedQuery);
+      return englishMatch || arabicMatch;
+    });
+  }, [searchQuery, chapters]);
+
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const query = searchQuery.trim().toLowerCase();
-    return verses.filter((v) => v.text.toLowerCase().includes(query)).slice(0, 50);
-  }, [searchQuery, verses]);
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return [];
+    const normalizedQuery = normalizeArabic(trimmed);
+    return normalizedVerses.filter((v) => v.normalizedText.includes(normalizedQuery)).slice(0, 50);
+  }, [searchQuery, normalizedVerses]);
 
   const activeSurahVerses = useMemo(() => {
     if (!selectedSurah) return [];
@@ -225,18 +301,19 @@ export default function App() {
     return activeSurahPages[safePageIndex] || [];
   }, [activeSurahPages, safePageIndex, totalPages]);
 
-  // 2. Compute the current Hizb dynamically from the first verse on current page
-  // Compute current Hizb and Quarter dynamically from the first verse on current page
+  // Compute the current Hizb/Quarter from the LAST verse shown on the page,
+  // so the indicator updates as soon as a boundary is crossed on that page
+  // rather than lagging until the next page is opened.
   const currentHizbInfo = useMemo(() => {
     if (!versesOnCurrentPage.length) return { hizb: 1, quarter: 1 };
 
-    const firstVerse = versesOnCurrentPage[0];
+    const lastVerse = versesOnCurrentPage[versesOnCurrentPage.length - 1];
     let matched = { hizb: 1, quarter: 1 };
 
     for (const item of (hizbData as HizbEntry[])) {
       if (
-        item.surah < firstVerse.chapter ||
-        (item.surah === firstVerse.chapter && item.verse <= firstVerse.verse)
+        item.surah < lastVerse.chapter ||
+        (item.surah === lastVerse.chapter && item.verse <= lastVerse.verse)
       ) {
         matched = { hizb: item.hizb, quarter: item.quarter };
       } else {
@@ -361,7 +438,7 @@ export default function App() {
             <div className="relative">
               <input
                 type="text"
-                placeholder="ابحث عن آية أو كلمة في القرآن الكريم..."
+                placeholder="ابحث عن سورة أو آية أو كلمة..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-bg-surface border border-border-input rounded-2xl py-3 pr-11 pl-10 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent text-text-base placeholder-text-muted transition-all shadow-xs"
@@ -382,8 +459,35 @@ export default function App() {
         {/* Search Results */}
         {searchQuery ? (
           <div>
+            {/* Matching Surahs Section */}
+            {matchingSurahs.length > 0 && (
+              <div className="mb-8">
+                <div className="mb-4 flex justify-between items-center border-b border-border-subtle pb-3">
+                  <h2 className="text-lg sm:text-xl font-bold text-text-heading">السور المطابقة</h2>
+                  <span className="text-xs sm:text-sm text-text-muted bg-bg-surface px-3 py-1 rounded-full border border-border-subtle">
+                    {new Intl.NumberFormat('ar-EG').format(matchingSurahs.length)} سورة
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {matchingSurahs.map((chapter) => {
+                    const totalVerses =
+                      chapter.verses?.length || verses.filter((v) => v.chapter === chapter.chapter).length;
+                    return (
+                      <SurahCard
+                        key={chapter.chapter}
+                        chapter={chapter}
+                        totalVerses={totalVerses}
+                        onSelect={handleSelectSurahFromSearch}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Verse Results Section */}
             <div className="mb-6 flex justify-between items-center border-b border-border-subtle pb-3">
-              <h2 className="text-lg sm:text-xl font-bold text-text-heading">نتائج البحث</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-text-heading">نتائج البحث في الآيات</h2>
               <span className="text-xs sm:text-sm text-text-muted bg-bg-surface px-3 py-1 rounded-full border border-border-subtle">
                 {new Intl.NumberFormat('ar-EG').format(searchResults.length)} نتيجة
               </span>
@@ -402,11 +506,16 @@ export default function App() {
                   );
                 })}
               </div>
-            ) : (
+            ) : matchingSurahs.length === 0 ? (
+              /* Only show the empty state if NEITHER surahs nor verses matched */
               <div className="text-center py-16 text-text-muted bg-bg-surface rounded-3xl border border-border-subtle p-6">
                 <Search className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-base font-medium">لم نجد أي آيات تطابق "{searchQuery}"</p>
+                <p className="text-base font-medium">لم نجد أي نتائج تطابق "{searchQuery}"</p>
               </div>
+            ) : (
+              <p className="text-center py-8 text-sm text-text-muted">
+                لا توجد آيات مطابقة، جرّب البحث عن كلمة مختلفة
+              </p>
             )}
           </div>
         ) : selectedSurah && activeSurahInfo ? (
@@ -493,37 +602,15 @@ export default function App() {
               {chapters.map((chapter) => {
                 const totalVerses = chapter.verses?.length || verses.filter((v) => v.chapter === chapter.chapter).length;
                 return (
-                  <button
+                  <SurahCard
                     key={chapter.chapter}
-                    onClick={() => {
-                      navigateToSurah(chapter);
+                    chapter={chapter}
+                    totalVerses={totalVerses}
+                    onSelect={(c) => {
+                      navigateToSurah(c);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
-                    className="bg-bg-surface p-4 rounded-2xl border border-border-subtle hover:border-accent/60 hover:bg-bg-hover transition-all group flex items-center justify-between text-right shadow-xs active:scale-[0.99]"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="relative flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center">
-                        <div className="absolute inset-0 bg-bg-base border border-border-subtle rounded-xl rotate-45 group-hover:rotate-0 transition-transform duration-300" />
-                        <span className="relative z-10 text-xs sm:text-sm text-text-heading font-bold font-sans">
-                          {new Intl.NumberFormat('ar-EG').format(chapter.chapter)}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-base sm:text-lg text-text-heading font-hafs-uthmanic truncate">
-                          سورة {chapter.arabicname.replace('سُوْرَةُ ', '')}
-                        </h3>
-                        <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1.5 font-sans">
-                          <span>{chapter.revelation === 'Meccan' ? 'مكية' : 'مدنية'}</span>
-                          <span>•</span>
-                          <span>{new Intl.NumberFormat('ar-EG').format(totalVerses)} آية</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <span className="text-xs text-text-muted font-sans group-hover:text-accent transition-colors">
-                      {chapter.englishname}
-                    </span>
-                  </button>
+                  />
                 );
               })}
             </div>
