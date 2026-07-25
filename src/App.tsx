@@ -3,8 +3,16 @@ import { Search, BookOpen, ArrowRight, Loader2, Info, Moon, Sun, ChevronRight, C
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchSurahInfo, fetchQuranText } from './api';
 import { ChapterInfo, Verse } from './types';
+import hizbData from '../public/data/hizb_data.json';
 
-// Helper to normalize strings for flexible URL matching (e.g., "Bakara", "baqarah", "fatiha")
+interface HizbEntry {
+  hizb: number;
+  quarter: number;
+  surah: number;
+  verse: number;
+}
+
+// Helper to normalize strings for flexible URL matching
 const normalizeForMatch = (text: string) => {
   return text
     .toLowerCase()
@@ -13,7 +21,6 @@ const normalizeForMatch = (text: string) => {
     .replace(/[^a-z0-9]/g, '');
 };
 
-// Generate clean URL slug for a chapter (e.g., "al-fatihah", "al-baqarah")
 const getSurahSlug = (chapter: ChapterInfo) => {
   return chapter.englishname
     .toLowerCase()
@@ -21,25 +28,21 @@ const getSurahSlug = (chapter: ChapterInfo) => {
     .replace(/[^a-z0-9-]/g, '');
 };
 
-// Find matching surah from URL path or slug
 const findSurahBySlug = (slug: string, chapterList: ChapterInfo[]): ChapterInfo | null => {
   if (!slug || slug === '/') return null;
 
   const cleanSlug = slug.replace(/^\/+|\/+$/g, '').toLowerCase();
   if (!cleanSlug) return null;
 
-  // 1. Check if numeric (e.g. /1, /2, /114)
   const num = parseInt(cleanSlug, 10);
   if (!isNaN(num) && num >= 1 && num <= 114) {
     const found = chapterList.find((c) => c.chapter === num);
     if (found) return found;
   }
 
-  // 2. Exact match against getSurahSlug (e.g. /al-baqarah)
   const exactMatch = chapterList.find((c) => getSurahSlug(c) === cleanSlug);
   if (exactMatch) return exactMatch;
 
-  // 3. Flexible / fuzzy match (e.g. /Bakara, /fatiha, /yasin, /kahf)
   const normalizedInput = normalizeForMatch(cleanSlug);
   const fuzzyMatch = chapterList.find((c) => {
     const normName = normalizeForMatch(c.englishname);
@@ -222,6 +225,28 @@ export default function App() {
     return activeSurahPages[safePageIndex] || [];
   }, [activeSurahPages, safePageIndex, totalPages]);
 
+  // 2. Compute the current Hizb dynamically from the first verse on current page
+  // Compute current Hizb and Quarter dynamically from the first verse on current page
+  const currentHizbInfo = useMemo(() => {
+    if (!versesOnCurrentPage.length) return { hizb: 1, quarter: 1 };
+
+    const firstVerse = versesOnCurrentPage[0];
+    let matched = { hizb: 1, quarter: 1 };
+
+    for (const item of (hizbData as HizbEntry[])) {
+      if (
+        item.surah < firstVerse.chapter ||
+        (item.surah === firstVerse.chapter && item.verse <= firstVerse.verse)
+      ) {
+        matched = { hizb: item.hizb, quarter: item.quarter };
+      } else {
+        break;
+      }
+    }
+
+    return matched;
+  }, [versesOnCurrentPage]);
+
   const handleNextPage = () => {
     if (safePageIndex < totalPages - 1) {
       setCurrentPageIndex(safePageIndex + 1);
@@ -286,9 +311,19 @@ export default function App() {
                 </span>
 
                 <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted bg-bg-hover/60 border border-border-subtle px-2.5 py-1 rounded-full flex-shrink-0">
-                  <span>صفحة {new Intl.NumberFormat('ar-EG').format(safePageIndex + 1)} من {new Intl.NumberFormat('ar-EG').format(totalPages)}</span>
-                  <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
                   <span>{new Intl.NumberFormat('ar-EG').format(surahProgressPercent)}٪</span>
+                  <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
+
+                  <span>
+                    الحزب {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.hizb)}
+                    {currentHizbInfo.quarter !== 1 && (
+                      <>
+                        {' - '}
+                        الربع {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.quarter)}
+                      </>
+                    )}
+                  </span>
+
                 </div>
               </div>
             </div>
