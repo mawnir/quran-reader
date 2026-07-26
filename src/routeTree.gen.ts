@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AboutRouteImport } from './routes/about'
+import { Route as BookmarksRouteImport } from './routes/bookmarks'
 import { Route as SurahIndexRouteImport } from './routes/$surah/index'
 import { Route as SurahPageIndexRouteImport } from './routes/$surah/$page/index'
 
@@ -19,9 +19,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const BookmarksRoute = BookmarksRouteImport.update({
+  id: '/bookmarks',
+  path: '/bookmarks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SurahIndexRoute = SurahIndexRouteImport.update({
@@ -37,34 +37,34 @@ const SurahPageIndexRoute = SurahPageIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/bookmarks': typeof BookmarksRoute
   '/$surah/': typeof SurahIndexRoute
   '/$surah/$page/': typeof SurahPageIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/bookmarks': typeof BookmarksRoute
   '/$surah': typeof SurahIndexRoute
   '/$surah/$page': typeof SurahPageIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/bookmarks': typeof BookmarksRoute
   '/$surah/': typeof SurahIndexRoute
   '/$surah/$page/': typeof SurahPageIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/$surah/' | '/$surah/$page/'
+  fullPaths: '/' | '/bookmarks' | '/$surah/' | '/$surah/$page/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/$surah' | '/$surah/$page'
-  id: '__root__' | '/' | '/about' | '/$surah/' | '/$surah/$page/'
+  to: '/' | '/bookmarks' | '/$surah' | '/$surah/$page'
+  id: '__root__' | '/' | '/bookmarks' | '/$surah/' | '/$surah/$page/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
+  BookmarksRoute: typeof BookmarksRoute
   SurahIndexRoute: typeof SurahIndexRoute
   SurahPageIndexRoute: typeof SurahPageIndexRoute
 }
@@ -78,11 +78,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/bookmarks': {
+      id: '/bookmarks'
+      path: '/bookmarks'
+      fullPath: '/bookmarks'
+      preLoaderRoute: typeof BookmarksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$surah/': {
@@ -104,7 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
+  BookmarksRoute: BookmarksRoute,
   SurahIndexRoute: SurahIndexRoute,
   SurahPageIndexRoute: SurahPageIndexRoute,
 }

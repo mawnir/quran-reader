@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowRight, BookOpen, Moon, Sun } from 'lucide-react';
+import { ArrowRight, BookOpen, Moon, Sun, Bookmark } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 
 interface HeaderProps {
   surahTitle?: string | null;
@@ -14,6 +15,12 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onToggleTheme,
 }) => {
+  const navigate = useNavigate();
+  const handleBookmark = () => {
+    navigate({
+      to: '/bookmarks',
+    });
+  };
   return (
     <header className="bg-bg-surface/95 backdrop-blur-md border-b border-border-subtle sticky top-0 z-30 shadow-xs">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
@@ -50,11 +57,20 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onToggleTheme}
-            className="w-10 h-10 flex items-center justify-center rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
+            className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
             aria-label="تغيير المظهر"
             title="تغيير المظهر"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+          </button>
+
+          <button
+            onClick={handleBookmark}
+            className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
+            aria-label="bookmarks"
+            title="bookmarks"
+          >
+            <Bookmark className="w-5 h-5" />
           </button>
         </div>
       </div>

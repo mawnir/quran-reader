@@ -10,7 +10,8 @@ import { Header } from '../../../components/Header';
 import { Pagination } from '../../../components/Pagination';
 import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
-import { X } from 'lucide-react';
+import { X, Bookmark } from 'lucide-react';
+import { isBookmarked, toggleBookmark } from '../../../utils/bookmarks';
 
 interface HizbEntry {
     hizb: number;
@@ -72,6 +73,7 @@ function SurahPageRouteComponent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
+    const [bookmarked, setBookmarked] = useState(false);
 
     const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
 
@@ -107,6 +109,7 @@ function SurahPageRouteComponent() {
             setSelectedSurah(null);
         }
     }, [chapters, surah]);
+
 
     const activeSurahVerses = useMemo(() => {
         if (!selectedSurah) return [];
@@ -144,6 +147,11 @@ function SurahPageRouteComponent() {
 
     const totalPages = activeSurahPages.length;
     const safePageIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
+
+    // Sync bookmark state whenever surah or page changes
+    useEffect(() => {
+        setBookmarked(isBookmarked(surah || '', safePageIndex + 1));
+    }, [surah, safePageIndex]);
 
     const surahProgressPercent = useMemo(() => {
         if (!totalPages) return 0;
@@ -294,6 +302,17 @@ function SurahPageRouteComponent() {
         });
     };
 
+    const handleBookmarkToggle = () => {
+        if (!activeSurahInfo) return;
+        const added = toggleBookmark({
+            surahSlug: surah || '',
+            page: safePageIndex + 1,
+            surahArabicName: activeSurahInfo.arabicname,
+            surahEnglishName: activeSurahInfo.englishname,
+        });
+        setBookmarked(added);
+    };
+
     if (loading) return <LoadingState />;
     if (error) return <ErrorState error={error} />;
 
@@ -354,6 +373,26 @@ function SurahPageRouteComponent() {
                             onPrev={handlePrevPage}
                             onNext={handleNextPage}
                         />
+
+                        {/* Bookmark button */}
+                        <div className="flex justify-center mt-4">
+                            <button
+                                onClick={handleBookmarkToggle}
+                                aria-label={bookmarked ? 'إزالة الإشارة المرجعية' : 'إضافة إشارة مرجعية'}
+                                title={bookmarked ? 'إزالة الإشارة المرجعية' : 'حفظ موضع القراءة'}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 ${
+                                    bookmarked
+                                        ? 'bg-accent text-white border-accent shadow-sm shadow-accent/30 hover:bg-accent/90'
+                                        : 'bg-bg-surface text-text-muted border-border-subtle hover:border-accent/40 hover:text-accent'
+                                }`}
+                            >
+                                <Bookmark
+                                    className="w-4 h-4"
+                                    fill={bookmarked ? 'currentColor' : 'none'}
+                                />
+                                {bookmarked ? 'تمت الإشارة' : 'إشارة مرجعية'}
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <div className="text-center py-16 text-text-muted bg-bg-surface rounded-3xl border border-border-subtle p-6">
