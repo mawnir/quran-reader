@@ -208,7 +208,7 @@ function SurahSlugRouteComponent() {
                   {versesOnCurrentPage.map((verse) => (
                     <React.Fragment key={verse.verse}>
                       <span className="inline">{verse.text}</span>
-                      <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 border border-accent/40 text-accent bg-accent/10 rounded-full text-xs font-sans mx-1.5 align-middle select-none">
+                      <span className="inline-flex font-hafs-uthmanic mx-1.5 text-accent text-md">
                         {new Intl.NumberFormat('ar-EG').format(verse.verse)}
                       </span>
                     </React.Fragment>

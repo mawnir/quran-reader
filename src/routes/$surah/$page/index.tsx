@@ -10,6 +10,7 @@ import { Header } from '../../../components/Header';
 import { Pagination } from '../../../components/Pagination';
 import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
+import { X } from 'lucide-react';
 
 interface HizbEntry {
     hizb: number;
@@ -17,6 +18,43 @@ interface HizbEntry {
     surah: number;
     verse: number;
 }
+
+type TafsirTab = 'tafsir' | 'wordByWord';
+
+interface WordItem {
+    id: number;
+    arabic: string;
+    transliteration: string | null;
+    translation: string | null;
+}
+
+interface TafsirState {
+    open: boolean;
+    surah: number | null;
+    verse: number | null;
+    activeTab: TafsirTab;
+
+    tafsirLoading: boolean;
+    tafsirError: string | null;
+    tafsirText: string | null;
+
+    wordsLoading: boolean;
+    wordsError: string | null;
+    words: WordItem[] | null;
+}
+
+const initialTafsirState: TafsirState = {
+    open: false,
+    surah: null,
+    verse: null,
+    activeTab: 'tafsir',
+    tafsirLoading: false,
+    tafsirError: null,
+    tafsirText: null,
+    wordsLoading: false,
+    wordsError: null,
+    words: null,
+};
 
 export const Route = createFileRoute('/$surah/$page/')({
     component: SurahPageRouteComponent,
@@ -35,8 +73,7 @@ function SurahPageRouteComponent() {
     const [error, setError] = useState<string | null>(null);
     const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
 
-    console.log("surahSlug", surah);
-    console.log("pageNumber", page);
+    const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
 
     const pageIndex = Math.max(0, parseInt(page || '1', 10) - 1);
 
@@ -162,6 +199,101 @@ function SurahPageRouteComponent() {
         navigate({ to: '/' });
     };
 
+    const fetchTafsirText = async (surahNum: number, verseNum: number) => {
+        setTafsir((prev) => ({ ...prev, tafsirLoading: true, tafsirError: null }));
+        try {
+            const res = await fetch(
+                `https://api.alquran.cloud/v1/ayah/${surahNum}:${verseNum}/ar.muyassar`
+            );
+            if (!res.ok) throw new Error('network');
+            const data = await res.json();
+            const text = data?.data?.text as string | undefined;
+            if (!text) throw new Error('empty');
+
+            setTafsir((prev) => ({ ...prev, tafsirLoading: false, tafsirText: text }));
+        } catch (err) {
+            console.error(err);
+            setTafsir((prev) => ({
+                ...prev,
+                tafsirLoading: false,
+                tafsirError: 'تعذر تحميل التفسير. حاول مرة أخرى.',
+            }));
+        }
+    };
+
+    const fetchWordByWord = async (surahNum: number, verseNum: number) => {
+        setTafsir((prev) => ({ ...prev, wordsLoading: true, wordsError: null }));
+        try {
+            const res = await fetch(
+                `https://api.quran.com/api/v4/verses/by_key/${surahNum}:${verseNum}?words=true&word_fields=text_uthmani,transliteration&word_translation_language=en`
+            );
+            if (!res.ok) throw new Error('network');
+            const data = await res.json();
+            const rawWords = data?.verse?.words as any[] | undefined;
+            if (!rawWords) throw new Error('empty');
+
+            const words: WordItem[] = rawWords
+                .filter((w) => w.char_type_name !== 'end') // drop the ayah-number marker "word"
+                .map((w) => ({
+                    id: w.id,
+                    arabic: w.text_uthmani ?? w.text ?? '',
+                    transliteration: w.transliteration?.text ?? null,
+                    translation: w.translation?.text ?? null,
+                }));
+
+            setTafsir((prev) => ({ ...prev, wordsLoading: false, words }));
+        } catch (err) {
+            console.error(err);
+            setTafsir((prev) => ({
+                ...prev,
+                wordsLoading: false,
+                wordsError: 'Could not load word-by-word translation.',
+            }));
+        }
+    };
+
+    const openTafsir = (surahNum: number, verseNum: number) => {
+        setTafsir({
+            ...initialTafsirState,
+            open: true,
+            surah: surahNum,
+            verse: verseNum,
+            tafsirLoading: true,
+        });
+        fetchTafsirText(surahNum, verseNum);
+    };
+
+    const closeTafsir = () => {
+        setTafsir((prev) => ({ ...prev, open: false }));
+    };
+
+
+    const tafsirSurahInfo = useMemo(() => {
+        if (tafsir.surah == null) return null;
+        // Falls back to a lookup in case the dialog is ever opened for a
+        // surah other than the one currently on screen.
+        if (activeSurahInfo && activeSurahInfo.chapter === tafsir.surah) {
+            return activeSurahInfo;
+        }
+        return chapters.find((c) => c.chapter === tafsir.surah) ?? null;
+    }, [tafsir.surah, activeSurahInfo, chapters]);
+
+    const switchTab = (tab: TafsirTab) => {
+        setTafsir((prev) => {
+            // Lazily fetch word-by-word data the first time that tab is opened
+            if (
+                tab === 'wordByWord' &&
+                prev.words === null &&
+                !prev.wordsLoading &&
+                prev.surah != null &&
+                prev.verse != null
+            ) {
+                fetchWordByWord(prev.surah, prev.verse);
+            }
+            return { ...prev, activeTab: tab };
+        });
+    };
+
     if (loading) return <LoadingState />;
     if (error) return <ErrorState error={error} />;
 
@@ -197,8 +329,17 @@ function SurahPageRouteComponent() {
                                 <p className="font-hafs-uthmanic font-bold text-2xl sm:text-2xl md:text-3xl leading-[2.3] sm:leading-[2.6] md:leading-[2.8] text-text-base text-justify">
                                     {versesOnCurrentPage.map((verse) => (
                                         <React.Fragment key={verse.verse}>
-                                            <span className="inline">{verse.text}</span>
-                                            <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 border border-accent/40 text-accent bg-accent/10 rounded-full text-xs font-sans mx-1.5 align-middle select-none">
+                                            <span
+                                                className="inline"
+                                            //className="inline cursor-pointer hover:bg-accent/10 rounded transition-colors duration-150"
+                                            //onClick={() => openTafsir(verse.chapter, verse.verse)}
+                                            >
+                                                {verse.text}
+                                            </span>
+                                            <span
+                                                className="inline-flex font-hafs-uthmanic mx-1.5 text-accent text-md cursor-pointer"
+                                                onClick={() => openTafsir(verse.chapter, verse.verse)}
+                                            >
                                                 {new Intl.NumberFormat('ar-EG').format(verse.verse)}
                                             </span>
                                         </React.Fragment>
@@ -220,6 +361,129 @@ function SurahPageRouteComponent() {
                     </div>
                 )}
             </main>
+
+            <AnimatePresence>
+                {tafsir.open && (
+                    <motion.div
+                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={closeTafsir}
+                    >
+                        <motion.div
+                            className="bg-bg-surface w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl border border-border-subtle p-6 max-h-[80vh] flex flex-col"
+                            initial={{ y: 40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 40, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div dir="rtl" className="flex items-center justify-between mb-4">
+                                <div className='flex items-baseline gap-2'>
+                                    {tafsirSurahInfo && (
+                                        <p className="text-sm font-semibold text-accent">
+                                            سورة {tafsirSurahInfo.arabicname}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-text-muted">
+                                        · الآية {tafsir.verse ? new Intl.NumberFormat('ar-EG').format(tafsir.verse) : ''}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={closeTafsir}
+                                    className="text-text-muted hover:text-text-base transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Tabs */}
+                            <div className="flex gap-2 mb-4 border-b border-border-subtle">
+                                <button
+                                    onClick={() => switchTab('tafsir')}
+                                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tafsir.activeTab === 'tafsir'
+                                        ? 'border-accent text-accent'
+                                        : 'border-transparent text-text-muted hover:text-text-base'
+                                        }`}
+                                >
+                                    التفسير الميسر
+                                </button>
+                                <button
+                                    onClick={() => switchTab('wordByWord')}
+                                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tafsir.activeTab === 'wordByWord'
+                                        ? 'border-accent text-accent'
+                                        : 'border-transparent text-text-muted hover:text-text-base'
+                                        }`}
+                                >
+                                    Word by Word
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto flex-1">
+                                {tafsir.activeTab === 'tafsir' && (
+                                    <div dir="rtl">
+                                        {tafsir.tafsirLoading && (
+                                            <div className="py-8 text-center text-text-muted">
+                                                جارٍ التحميل...
+                                            </div>
+                                        )}
+                                        {tafsir.tafsirError && (
+                                            <div className="py-8 text-center text-red-500">
+                                                {tafsir.tafsirError}
+                                            </div>
+                                        )}
+                                        {tafsir.tafsirText && (
+                                            <p className="text-base leading-loose text-text-base text-justify">
+                                                {tafsir.tafsirText}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {tafsir.activeTab === 'wordByWord' && (
+                                    <div dir="ltr">
+                                        {tafsir.wordsLoading && (
+                                            <div className="py-8 text-center text-text-muted">
+                                                Loading...
+                                            </div>
+                                        )}
+                                        {tafsir.wordsError && (
+                                            <div className="py-8 text-center text-red-500">
+                                                {tafsir.wordsError}
+                                            </div>
+                                        )}
+                                        {tafsir.words && (
+                                            <div className="flex flex-wrap gap-1 justify-start" dir="rtl">
+                                                {tafsir.words.map((word) => (
+                                                    <div
+                                                        key={word.id}
+                                                        className="flex flex-col items-center bg-bg-base border border-border-subtle rounded-xl px-1 py-2 min-w-[70px]"
+                                                    >
+                                                        <span className="font-hafs-uthmanic text-xl text-text-base mb-1">
+                                                            {word.arabic}
+                                                        </span>
+                                                        {/* {word.transliteration && (
+                                                            <span className="text-xs italic text-text-muted mb-0.5">
+                                                                {word.transliteration}
+                                                            </span>
+                                                        )} */}
+                                                        {word.translation && (
+                                                            <span className="text-xs text-accent">
+                                                                {word.translation}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
