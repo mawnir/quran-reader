@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createFileRoute, useNavigate, useParams, Outlet, useChildMatches } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchSurahInfo, fetchQuranText } from '../utils/api';
 import { ChapterInfo, Verse } from '../utils/types';
@@ -18,15 +18,14 @@ interface HizbEntry {
   verse: number;
 }
 
-export const Route = createFileRoute('/$surahSlug')({
-  component: SurahSlugRouteComponent,
+export const Route = createFileRoute('/$surahSlug/page/$pageNumber')({
+  component: SurahPageRouteComponent,
 });
 
-function SurahSlugRouteComponent() {
+function SurahPageRouteComponent() {
   const navigate = useNavigate();
-  const params = useParams({ from: '/$surahSlug' });
-  const { surahSlug } = params;
-  const childMatches = useChildMatches();
+  const params = useParams({ from: '/$surahSlug/page/$pageNumber' });
+  const { surahSlug, pageNumber } = params;
 
   const { theme, toggleTheme } = useTheme();
 
@@ -34,9 +33,9 @@ function SurahSlugRouteComponent() {
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+
+  const pageIndex = Math.max(0, parseInt(pageNumber || '1', 10) - 1);
 
   useEffect(() => {
     async function loadData() {
@@ -79,7 +78,6 @@ function SurahSlugRouteComponent() {
     return chapters.find((c) => c.chapter === selectedSurah);
   }, [selectedSurah, chapters]);
 
-  // Split Surah verses into pages of ~100 words each
   const activeSurahPages = useMemo(() => {
     if (!activeSurahVerses.length) return [];
 
@@ -105,7 +103,7 @@ function SurahSlugRouteComponent() {
   }, [activeSurahVerses]);
 
   const totalPages = activeSurahPages.length;
-  const safePageIndex = Math.min(currentPageIndex, Math.max(0, totalPages - 1));
+  const safePageIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
 
   const surahProgressPercent = useMemo(() => {
     if (!totalPages) return 0;
@@ -139,14 +137,20 @@ function SurahSlugRouteComponent() {
 
   const handleNextPage = () => {
     if (safePageIndex < totalPages - 1) {
-      setCurrentPageIndex(safePageIndex + 1);
+      navigate({
+        to: '/$surahSlug/page/$pageNumber',
+        params: { surahSlug, pageNumber: (safePageIndex + 2).toString() },
+      });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handlePrevPage = () => {
     if (safePageIndex > 0) {
-      setCurrentPageIndex(safePageIndex - 1);
+      navigate({
+        to: '/$surahSlug/page/$pageNumber',
+        params: { surahSlug, pageNumber: safePageIndex.toString() },
+      });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -172,16 +176,15 @@ function SurahSlugRouteComponent() {
           <div className="animate-in fade-in duration-300">
             <SurahHeader
               surahNumber={selectedSurah}
-              showBismillah={currentPageIndex === 0}
+              showBismillah={safePageIndex === 0}
               progressPercent={surahProgressPercent}
               hizbInfo={currentHizbInfo}
-              showHizbInfo={currentPageIndex !== 0}
+              showHizbInfo={safePageIndex !== 0}
             />
 
-            {/* Verses Container */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentPageIndex}
+                key={safePageIndex}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}

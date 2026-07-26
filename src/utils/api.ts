@@ -1,5 +1,5 @@
 import { QuranEdition, QuranInfo, Verse, ChapterInfo } from './types';
-import quranData from './data/quran_data.json';
+import quranData from '../data/quran_data.json';
 
 interface QuranJsonSurah {
   id: number;
