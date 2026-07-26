@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
+import { createFileRoute, useNavigate, useParams, Outlet, useChildMatches } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchSurahInfo, fetchQuranText } from '../utils/api';
-import { ChapterInfo, Verse } from '../utils/types';
-import hizbData from '../data/hizb_data.json';
-import { useTheme } from '../utils/useTheme';
-import { findSurahBySlug } from '../utils/quranUtils';
-import { Header } from '../components/Header';
-import { Pagination } from '../components/Pagination';
-import { SurahHeader } from '../components/SurahHeader';
-import { LoadingState, ErrorState } from '../components/States';
+import { fetchSurahInfo, fetchQuranText } from '../../utils/api';
+import { ChapterInfo, Verse } from '../../utils/types';
+import hizbData from '../../data/hizb_data.json';
+import { useTheme } from '../../utils/useTheme';
+import { findSurahBySlug } from '../../utils/quranUtils';
+import { Header } from '../../components/Header';
+import { Pagination } from '../../components/Pagination';
+import { SurahHeader } from '../../components/SurahHeader';
+import { LoadingState, ErrorState } from '../../components/States';
 
 interface HizbEntry {
   hizb: number;
@@ -18,24 +18,25 @@ interface HizbEntry {
   verse: number;
 }
 
-export const Route = createFileRoute('/$surahSlug/page/$pageNumber')({
-  component: SurahPageRouteComponent,
-});
+export const Route = createFileRoute('/$surah/')({
+  component: SurahSlugRouteComponent,
+})
 
-function SurahPageRouteComponent() {
+function SurahSlugRouteComponent() {
   const navigate = useNavigate();
-  const params = useParams({ from: '/$surahSlug/page/$pageNumber' });
-  const { surahSlug, pageNumber } = params;
+  const params = useParams({ from: '/$surah/' });
+  const { surah } = params;
 
+  console.log("surah", surah);
   const { theme, toggleTheme } = useTheme();
 
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
 
-  const pageIndex = Math.max(0, parseInt(pageNumber || '1', 10) - 1);
+  const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
 
   useEffect(() => {
     async function loadData() {
@@ -60,13 +61,13 @@ function SurahPageRouteComponent() {
   useEffect(() => {
     if (chapters.length === 0) return;
 
-    const matched = findSurahBySlug(surahSlug || '', chapters);
+    const matched = findSurahBySlug(surah || '', chapters);
     if (matched) {
       setSelectedSurah(matched.chapter);
     } else {
       setSelectedSurah(null);
     }
-  }, [chapters, surahSlug]);
+  }, [chapters, surah]);
 
   const activeSurahVerses = useMemo(() => {
     if (!selectedSurah) return [];
@@ -78,6 +79,7 @@ function SurahPageRouteComponent() {
     return chapters.find((c) => c.chapter === selectedSurah);
   }, [selectedSurah, chapters]);
 
+  // Split Surah verses into pages of ~100 words each
   const activeSurahPages = useMemo(() => {
     if (!activeSurahVerses.length) return [];
 
@@ -103,7 +105,7 @@ function SurahPageRouteComponent() {
   }, [activeSurahVerses]);
 
   const totalPages = activeSurahPages.length;
-  const safePageIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
+  const safePageIndex = Math.min(currentPageIndex, Math.max(0, totalPages - 1));
 
   const surahProgressPercent = useMemo(() => {
     if (!totalPages) return 0;
@@ -136,20 +138,30 @@ function SurahPageRouteComponent() {
   }, [versesOnCurrentPage]);
 
   const handleNextPage = () => {
+    // if (safePageIndex < totalPages - 1) {
+    //   setCurrentPageIndex(safePageIndex + 1);
+    //   window.scrollTo({ top: 0, behavior: 'smooth' });
+    // }
+
     if (safePageIndex < totalPages - 1) {
       navigate({
-        to: '/$surahSlug/page/$pageNumber',
-        params: { surahSlug, pageNumber: (safePageIndex + 2).toString() },
+        to: '/$surah/$page',
+        params: { surah, page: (safePageIndex + 2).toString() },
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handlePrevPage = () => {
+    // if (safePageIndex > 0) {
+    //   setCurrentPageIndex(safePageIndex - 1);
+    //   window.scrollTo({ top: 0, behavior: 'smooth' });
+    // }
+
     if (safePageIndex > 0) {
       navigate({
-        to: '/$surahSlug/page/$pageNumber',
-        params: { surahSlug, pageNumber: safePageIndex.toString() },
+        to: '/$surah/$page',
+        params: { surah, page: safePageIndex.toString() },
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -176,15 +188,16 @@ function SurahPageRouteComponent() {
           <div className="animate-in fade-in duration-300">
             <SurahHeader
               surahNumber={selectedSurah}
-              showBismillah={safePageIndex === 0}
+              showBismillah={currentPageIndex === 0}
               progressPercent={surahProgressPercent}
               hizbInfo={currentHizbInfo}
-              showHizbInfo={safePageIndex !== 0}
+              showHizbInfo={currentPageIndex !== 0}
             />
 
+            {/* Verses Container */}
             <AnimatePresence mode="wait">
               <motion.div
-                key={safePageIndex}
+                key={currentPageIndex}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
@@ -220,3 +233,5 @@ function SurahPageRouteComponent() {
     </div>
   );
 }
+
+

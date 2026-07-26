@@ -10,18 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SurahSlugRouteImport } from './routes/$surahSlug'
 import { Route as AboutRouteImport } from './routes/about'
-import { Route as SurahSlugPagePageNumberRouteImport } from './routes/$surahSlug.page.$pageNumber'
+import { Route as SurahIndexRouteImport } from './routes/$surah/index'
+import { Route as SurahPageIndexRouteImport } from './routes/$surah/$page/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SurahSlugRoute = SurahSlugRouteImport.update({
-  id: '/$surahSlug',
-  path: '/$surahSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -29,44 +24,49 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SurahSlugPagePageNumberRoute = SurahSlugPagePageNumberRouteImport.update({
-  id: '/page/$pageNumber',
-  path: '/page/$pageNumber',
-  getParentRoute: () => SurahSlugRoute,
+const SurahIndexRoute = SurahIndexRouteImport.update({
+  id: '/$surah/',
+  path: '/$surah/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SurahPageIndexRoute = SurahPageIndexRouteImport.update({
+  id: '/$surah/$page/',
+  path: '/$surah/$page/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$surahSlug': typeof SurahSlugRouteWithChildren
   '/about': typeof AboutRoute
-  '/$surahSlug/page/$pageNumber': typeof SurahSlugPagePageNumberRoute
+  '/$surah/': typeof SurahIndexRoute
+  '/$surah/$page/': typeof SurahPageIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$surahSlug': typeof SurahSlugRouteWithChildren
   '/about': typeof AboutRoute
-  '/$surahSlug/page/$pageNumber': typeof SurahSlugPagePageNumberRoute
+  '/$surah': typeof SurahIndexRoute
+  '/$surah/$page': typeof SurahPageIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$surahSlug': typeof SurahSlugRouteWithChildren
   '/about': typeof AboutRoute
-  '/$surahSlug/page/$pageNumber': typeof SurahSlugPagePageNumberRoute
+  '/$surah/': typeof SurahIndexRoute
+  '/$surah/$page/': typeof SurahPageIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$surahSlug' | '/about' | '/$surahSlug/page/$pageNumber'
+  fullPaths: '/' | '/about' | '/$surah/' | '/$surah/$page/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$surahSlug' | '/about' | '/$surahSlug/page/$pageNumber'
-  id:
-    '__root__' | '/' | '/$surahSlug' | '/about' | '/$surahSlug/page/$pageNumber'
+  to: '/' | '/about' | '/$surah' | '/$surah/$page'
+  id: '__root__' | '/' | '/about' | '/$surah/' | '/$surah/$page/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  SurahSlugRoute: typeof SurahSlugRouteWithChildren
   AboutRoute: typeof AboutRoute
+  SurahIndexRoute: typeof SurahIndexRoute
+  SurahPageIndexRoute: typeof SurahPageIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -78,13 +78,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$surahSlug': {
-      id: '/$surahSlug'
-      path: '/$surahSlug'
-      fullPath: '/$surahSlug'
-      preLoaderRoute: typeof SurahSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -92,32 +85,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/$surahSlug/page/$pageNumber': {
-      id: '/$surahSlug/page/$pageNumber'
-      path: '/page/$pageNumber'
-      fullPath: '/$surahSlug/page/$pageNumber'
-      preLoaderRoute: typeof SurahSlugPagePageNumberRouteImport
-      parentRoute: typeof SurahSlugRoute
+    '/$surah/': {
+      id: '/$surah/'
+      path: '/$surah'
+      fullPath: '/$surah/'
+      preLoaderRoute: typeof SurahIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$surah/$page/': {
+      id: '/$surah/$page/'
+      path: '/$surah/$page'
+      fullPath: '/$surah/$page/'
+      preLoaderRoute: typeof SurahPageIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface SurahSlugRouteChildren {
-  SurahSlugPagePageNumberRoute: typeof SurahSlugPagePageNumberRoute
-}
-
-const SurahSlugRouteChildren: SurahSlugRouteChildren = {
-  SurahSlugPagePageNumberRoute: SurahSlugPagePageNumberRoute,
-}
-
-const SurahSlugRouteWithChildren = SurahSlugRoute._addFileChildren(
-  SurahSlugRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  SurahSlugRoute: SurahSlugRouteWithChildren,
   AboutRoute: AboutRoute,
+  SurahIndexRoute: SurahIndexRoute,
+  SurahPageIndexRoute: SurahPageIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

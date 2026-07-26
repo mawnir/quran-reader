@@ -46,7 +46,7 @@ function IndexRouteComponent() {
 
   const navigateToSurah = (chapter: ChapterInfo) => {
     const slug = getSurahSlug(chapter);
-    navigate({ to: '/$surahSlug', params: { surahSlug: slug } });
+    navigate({ to: '/$surah', params: { surah: slug } });
   };
 
   const normalizedVerses = useMemo(() => {
