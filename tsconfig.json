@@ -20,6 +20,8 @@
         "./*"
       ]
     },
+    "strictNullChecks": true,
+    "strict": true,
     "allowImportingTsExtensions": true,
     "noEmit": true
   }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { Search, BookOpen, ArrowRight, Loader2, Info, Moon, Sun, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchSurahInfo, fetchQuranText } from './api';
 import { ChapterInfo, Verse } from './types';
-import hizbData from '../public/data/hizb_data.json';
+import hizbData from './data/hizb_data.json';
 
 interface HizbEntry {
   hizb: number;
@@ -134,6 +135,10 @@ const SurahCard: React.FC<SurahCardProps> = ({ chapter, totalVerses, onSelect })
 };
 
 export default function App() {
+  const navigate = useNavigate();
+  const params = useParams({ strict: false });
+  const surahSlug = (params as Record<string, string>).surahSlug;
+
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
   const [verses, setVerses] = useState<Verse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -186,36 +191,28 @@ export default function App() {
     loadData();
   }, []);
 
-  // Synchronize URL Route with Selected Surah
+  // Synchronize URL Route with Selected Surah using TanStack Router
   useEffect(() => {
     if (chapters.length === 0) return;
 
-    const handleLocationChange = () => {
-      const path = window.location.pathname;
-      const matched = findSurahBySlug(path, chapters);
-      if (matched) {
-        setSelectedSurah(matched.chapter);
-      } else {
-        setSelectedSurah(null);
-      }
-    };
+    const matched = findSurahBySlug(surahSlug || '', chapters);
+    if (matched) {
+      setSelectedSurah(matched.chapter);
+    } else {
+      setSelectedSurah(null);
+    }
+  }, [chapters, surahSlug]);
 
-    handleLocationChange();
-
-    window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, [chapters]);
-
-  // Navigation handlers
+  // Navigation handlers using TanStack Router navigate
   const navigateToSurah = (chapter: ChapterInfo) => {
     const slug = getSurahSlug(chapter);
-    window.history.pushState({}, '', `/${slug}`);
+    navigate({ to: '/$surahSlug', params: { surahSlug: slug } });
     setSelectedSurah(chapter.chapter);
     setCurrentPageIndex(0);
   };
 
   const navigateToHome = () => {
-    window.history.pushState({}, '', '/');
+    navigate({ to: '/' });
     setSelectedSurah(null);
     setSearchQuery('');
     setCurrentPageIndex(0);
@@ -387,21 +384,7 @@ export default function App() {
                   سورة {activeSurahInfo.arabicname.replace('سُوْرَةُ ', '')}
                 </span>
 
-                <div className="flex items-center gap-1.5 text-xs font-medium text-text-muted bg-bg-hover/60 border border-border-subtle px-2.5 py-1 rounded-full flex-shrink-0">
-                  <span>{new Intl.NumberFormat('ar-EG').format(surahProgressPercent)}٪</span>
-                  <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
 
-                  <span>
-                    الحزب {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.hizb)}
-                    {currentHizbInfo.quarter !== 1 && (
-                      <>
-                        {' - '}
-                        الربع {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.quarter)}
-                      </>
-                    )}
-                  </span>
-
-                </div>
               </div>
             </div>
           ) : (
@@ -528,6 +511,24 @@ export default function App() {
                   بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                 </p>
                 <div className="w-16 h-0.5 bg-accent/30 mx-auto mt-4 rounded-full" />
+              </div>
+            )}
+
+            {currentPageIndex != 0 && (
+              <div className="flex justify-end ml-4 mb-0.5">
+                <div dir="ltr" className="flex items-center gap-1.5 text-sm font-medium text-text-muted">
+                  <span>{new Intl.NumberFormat('ar-EG').format(surahProgressPercent)}٪</span>
+                  <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
+                  <span dir="rtl">
+                    الحزب {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.hizb)}
+                    {currentHizbInfo.quarter !== 1 && (
+                      <>
+                        {' - '}
+                        الربع {new Intl.NumberFormat('ar-EG').format(currentHizbInfo.quarter)}
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
             )}
 

@@ -1,6 +1,5 @@
 import { QuranEdition, QuranInfo, Verse, ChapterInfo } from './types';
-
-const QURAN_DATA_URL = '/data/quran_data.json';
+import quranData from './data/quran_data.json';
 
 interface QuranJsonSurah {
   id: number;
@@ -21,13 +20,9 @@ async function fetchFullQuran(): Promise<QuranJsonSurah[]> {
     return cachedQuranData;
   }
 
-  const response = await fetch(QURAN_DATA_URL);
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch Quran data');
-  }
-  cachedQuranData = await response.json();
-  return cachedQuranData!;
+  // JSON is already imported
+  cachedQuranData = quranData as QuranJsonSurah[];
+  return cachedQuranData;
 }
 
 export async function fetchSurahInfo(): Promise<QuranInfo> {
