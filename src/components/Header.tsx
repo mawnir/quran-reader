@@ -49,8 +49,9 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex items-center gap-2.5 font-bold text-lg sm:text-xl text-text-heading cursor-pointer hover:opacity-90 transition-opacity"
             onClick={onGoHome}
           >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent flex-shrink-0">
-              <BookOpen className="w-5 h-5" />
+            <div className="">
+              {/* <BookOpen className="w-5 h-5" /> */}
+              <img src="/quran-icon-512.png" alt="Logo" className="w-10 h-10 border-2 border-accent/20 rounded-xl" />
             </div>
             <span className="font-bold tracking-tight">القرآن الكريم</span>
           </div>
