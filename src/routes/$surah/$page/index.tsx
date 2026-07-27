@@ -386,7 +386,7 @@ function SurahPageRouteComponent() {
                                 onClick={handleBookmarkToggle}
                                 aria-label={bookmarked ? 'إزالة الإشارة المرجعية' : 'إضافة إشارة مرجعية'}
                                 title={bookmarked ? 'إزالة الإشارة المرجعية' : 'حفظ موضع القراءة'}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 ${bookmarked
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 font-amiri ${bookmarked
                                     ? 'bg-accent text-white border-accent shadow-sm shadow-accent/30 hover:bg-accent/90'
                                     : 'bg-bg-surface text-text-muted border-border-subtle hover:border-accent/40 hover:text-accent'
                                     }`}

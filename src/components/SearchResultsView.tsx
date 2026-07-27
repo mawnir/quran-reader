@@ -28,7 +28,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
       {matchingSurahs.length > 0 && (
         <div className="mb-8">
           <div className="mb-4 flex justify-between items-center border-b border-border-subtle pb-3">
-            <h2 className="text-lg sm:text-xl font-bold text-text-heading">السور المطابقة</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-text-heading font-amiri">السور المطابقة</h2>
             <span className="text-xs sm:text-sm text-text-muted bg-bg-surface px-3 py-1 rounded-full border border-border-subtle">
               {new Intl.NumberFormat('ar-EG').format(matchingSurahs.length)} سورة
             </span>
@@ -52,7 +52,7 @@ export const SearchResultsView: React.FC<SearchResultsViewProps> = ({
 
       {/* Verse Results Section */}
       <div className="mb-6 flex justify-between items-center border-b border-border-subtle pb-3">
-        <h2 className="text-lg sm:text-xl font-bold text-text-heading">نتائج البحث في الآيات</h2>
+        <h2 className="text-lg sm:text-xl font-bold text-text-heading font-amiri">نتائج البحث في الآيات</h2>
         <span className="text-xs sm:text-sm text-text-muted bg-bg-surface px-3 py-1 rounded-full border border-border-subtle">
           {new Intl.NumberFormat('ar-EG').format(searchResults.length)} نتيجة
         </span>

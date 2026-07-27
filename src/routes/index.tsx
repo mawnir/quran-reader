@@ -9,7 +9,6 @@ import { SearchBar } from '../components/SearchBar';
 import { SurahCard } from '../components/SurahCard';
 import { SearchResultsView } from '../components/SearchResultsView';
 import { LoadingState, ErrorState } from '../components/States';
-import { Bookmark } from 'lucide-react';
 
 export const Route = createFileRoute('/')({
   component: IndexRouteComponent,
@@ -50,11 +49,6 @@ function IndexRouteComponent() {
     navigate({ to: '/$surah/$page', params: { surah: slug, page: '1' } });
   };
 
-  const handleBookmark = () => {
-    navigate({
-      to: '/bookmarks',
-    });
-  };
   const normalizedVerses = useMemo(() => {
     return verses.map((v) => ({ ...v, normalizedText: normalizeArabic(v.text) }));
   }, [verses]);
@@ -113,23 +107,14 @@ function IndexRouteComponent() {
           <div className="animate-in fade-in duration-300">
             <div className="mb-6 flex justify-between items-end border-b border-border-subtle pb-4">
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-text-heading">سور القرآن الكريم</h1>
-                <p className="text-xs sm:text-sm text-text-muted mt-0.5">برواية حفص عن عاصم</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-text-heading font-hafs-uthmanic">سور القرآن</h1>
+                <p className="text-xs sm:text-sm text-text-muted mt-0.5 font-hafs-uthmanic">برواية حفص عن عاصم</p>
               </div>
 
               <div className='flex items-center gap-2'>
-                <span className="text-xs font-medium text-accent bg-accent/10 border border-accent/20 px-3 py-1 rounded-full">
+                <span className="text-xs font-medium text-accent bg-accent/10 border border-accent/20 px-3 py-1 rounded-lg">
                   ١١٤ سورة
                 </span>
-
-                <button
-                  onClick={handleBookmark}
-                  className="w-8 h-8 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-accent hover:border-accent/20 hover:bg-accent/10 active:scale-95 transition-all duration-150 flex-shrink-0"
-                  aria-label="bookmarks"
-                  title="bookmarks"
-                >
-                  <Bookmark className="w-4 h-4" />
-                </button>
               </div>
             </div>
 

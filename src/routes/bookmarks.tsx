@@ -53,8 +53,8 @@ function BookmarksRouteComponent() {
                 {/* Page heading */}
                 <div className="mb-6 flex justify-between items-end border-b border-border-subtle pb-4">
                     <div>
-                        <h1 className="text-xl sm:text-2xl font-bold text-text-heading flex items-center gap-2">
-                            <Bookmark className="w-5 h-5 text-accent" />
+                        <h1 className="text-xl sm:text-2xl font-bold text-text-heading flex items-center gap-2 font-amiri">
+                            <Bookmark className="w-5 h-5 text-accent " />
                             الصفحات المحفوظة
                         </h1>
                     </div>
@@ -81,14 +81,14 @@ function BookmarksRouteComponent() {
                             <BookmarkX className="w-8 h-8 text-accent/60" />
                         </div>
                         <div>
-                            <p className="text-base font-semibold text-text-heading">لا توجد علامات مرجعية بعد</p>
-                            <p className="text-sm text-text-muted mt-1">
+                            <p className="text-base font-semibold text-text-heading font-amiri">لا توجد علامات مرجعية بعد</p>
+                            <p className="text-sm text-text-muted mt-1 font-amiri">
                                 افتح أي سورة واضغط على زر الإشارة المرجعية لحفظ موضعك
                             </p>
                         </div>
                         <button
                             onClick={() => navigate({ to: '/' })}
-                            className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors"
+                            className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent/90 transition-colors font-amiri"
                         >
                             <BookOpen className="w-4 h-4" />
                             تصفح السور

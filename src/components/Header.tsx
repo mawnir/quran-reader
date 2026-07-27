@@ -18,6 +18,12 @@ export const Header: React.FC<HeaderProps> = ({
   bookmark
 }) => {
 
+  const navigate = useNavigate();
+  const handleBookmark = () => {
+    navigate({
+      to: '/bookmarks',
+    });
+  };
   return (
     <header className="bg-bg-surface/95 backdrop-blur-md border-b border-border-subtle sticky top-0 z-30 shadow-xs">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
@@ -45,15 +51,24 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
         ) : (
-          <div
-            className="flex items-center gap-2.5 font-bold text-lg sm:text-xl text-text-heading cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={onGoHome}
-          >
-            <div className="">
-              {/* <BookOpen className="w-5 h-5" /> */}
-              <img src="/quran-icon-512.png" alt="Logo" className="w-10 h-10 border-2 border-accent/20 rounded-xl" />
-            </div>
-            <span className="font-bold tracking-tight">القرآن الكريم</span>
+          <div className="grid grid-cols-[auto_1fr_auto] items-center w-full">
+            <button
+              onClick={handleBookmark}
+              className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-accent hover:border-accent/20 hover:bg-accent/10 active:scale-95 transition-all duration-150 flex-shrink-0"
+              aria-label="bookmarks"
+              title="bookmarks"
+            >
+              <Bookmark className="w-5 h-5" />
+            </button>
+
+            <span
+              className="font-bold tracking-tight font-amiri text-green-800 text-lg sm:text-2xl text-center cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={onGoHome}
+            >
+              القرآن الكريم
+            </span>
+
+            <div /> {/* spacer to balance the bookmark button's width */}
           </div>
         )}
 
