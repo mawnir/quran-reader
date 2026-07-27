@@ -62,7 +62,7 @@ function BookmarksRouteComponent() {
                     {bookmarks.length > 0 && (
                         <button
                             onClick={handleClearAll}
-                            className="flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-600 transition-colors border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full px-3 py-1.5"
+                            className=" items-center hidden sm:flex gap-1.5 text-xs font-medium text-red-500 hover:text-red-600 transition-colors border border-red-200 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full px-3 py-1.5"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
                             حذف الكل

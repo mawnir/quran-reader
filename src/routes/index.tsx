@@ -121,13 +121,14 @@ function IndexRouteComponent() {
                 <span className="text-xs font-medium text-accent bg-accent/10 border border-accent/20 px-3 py-1 rounded-full">
                   ١١٤ سورة
                 </span>
+
                 <button
                   onClick={handleBookmark}
-                  className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
+                  className="w-8 h-8 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-accent hover:border-accent/20 hover:bg-accent/10 active:scale-95 transition-all duration-150 flex-shrink-0"
                   aria-label="bookmarks"
                   title="bookmarks"
                 >
-                  <Bookmark className="w-5 h-5" />
+                  <Bookmark className="w-4 h-4" />
                 </button>
               </div>
             </div>
