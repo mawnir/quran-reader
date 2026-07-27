@@ -7,6 +7,7 @@ interface HeaderProps {
   onGoHome: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  bookmark?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,13 +15,9 @@ export const Header: React.FC<HeaderProps> = ({
   onGoHome,
   theme,
   onToggleTheme,
+  bookmark
 }) => {
-  const navigate = useNavigate();
-  const handleBookmark = () => {
-    navigate({
-      to: '/bookmarks',
-    });
-  };
+
   return (
     <header className="bg-bg-surface/95 backdrop-blur-md border-b border-border-subtle sticky top-0 z-30 shadow-xs">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
@@ -36,9 +33,15 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 truncate">
-              <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
-                سورة {surahTitle.replace('سُوْرَةُ ', '')}
-              </span>
+              {bookmark ?
+                <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
+                  {surahTitle}
+                </span>
+                :
+                <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
+                  سورة {surahTitle.replace('سُوْرَةُ ', '')}
+                </span>
+              }
             </div>
           </div>
         ) : (
@@ -62,15 +65,6 @@ export const Header: React.FC<HeaderProps> = ({
             title="تغيير المظهر"
           >
             {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
-          </button>
-
-          <button
-            onClick={handleBookmark}
-            className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
-            aria-label="bookmarks"
-            title="bookmarks"
-          >
-            <Bookmark className="w-5 h-5" />
           </button>
         </div>
       </div>

@@ -39,10 +39,14 @@ function BookmarksRouteComponent() {
 
     return (
         <div dir="rtl" className="min-h-screen bg-bg-base text-text-base flex flex-col transition-colors duration-300 font-sans">
+
+
             <Header
+                surahTitle={"المفضلة"}
                 onGoHome={() => navigate({ to: '/' })}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                bookmark={true}
             />
 
             <main className="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 pb-24 w-full flex-1">
@@ -51,9 +55,8 @@ function BookmarksRouteComponent() {
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold text-text-heading flex items-center gap-2">
                             <Bookmark className="w-5 h-5 text-accent" />
-                            الصفحات التي قمت بحفظها
+                            الصفحات المحفوظة
                         </h1>
-
                     </div>
 
                     {bookmarks.length > 0 && (
@@ -115,8 +118,7 @@ function BookmarksRouteComponent() {
 
                                         <button
                                             onClick={(e) => handleDelete(e, bm)}
-                                            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors opacity-0 group-hover:opacity-100"
-                                            aria-label="حذف الإشارة المرجعية"
+                                            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100" aria-label="حذف الإشارة المرجعية"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>

@@ -9,6 +9,7 @@ import { SearchBar } from '../components/SearchBar';
 import { SurahCard } from '../components/SurahCard';
 import { SearchResultsView } from '../components/SearchResultsView';
 import { LoadingState, ErrorState } from '../components/States';
+import { Bookmark } from 'lucide-react';
 
 export const Route = createFileRoute('/')({
   component: IndexRouteComponent,
@@ -49,6 +50,11 @@ function IndexRouteComponent() {
     navigate({ to: '/$surah/$page', params: { surah: slug, page: '1' } });
   };
 
+  const handleBookmark = () => {
+    navigate({
+      to: '/bookmarks',
+    });
+  };
   const normalizedVerses = useMemo(() => {
     return verses.map((v) => ({ ...v, normalizedText: normalizeArabic(v.text) }));
   }, [verses]);
@@ -84,6 +90,7 @@ function IndexRouteComponent() {
       />
 
       <main className="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 pb-24 w-full flex-1">
+
         <SearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -109,9 +116,20 @@ function IndexRouteComponent() {
                 <h1 className="text-xl sm:text-2xl font-bold text-text-heading">سور القرآن الكريم</h1>
                 <p className="text-xs sm:text-sm text-text-muted mt-0.5">برواية حفص عن عاصم</p>
               </div>
-              <span className="text-xs font-medium text-accent bg-accent/10 border border-accent/20 px-3 py-1 rounded-full">
-                ١١٤ سورة
-              </span>
+
+              <div className='flex items-center gap-2'>
+                <span className="text-xs font-medium text-accent bg-accent/10 border border-accent/20 px-3 py-1 rounded-full">
+                  ١١٤ سورة
+                </span>
+                <button
+                  onClick={handleBookmark}
+                  className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
+                  aria-label="bookmarks"
+                  title="bookmarks"
+                >
+                  <Bookmark className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
