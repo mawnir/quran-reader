@@ -48,7 +48,7 @@ const initialTafsirState: TafsirState = {
     open: false,
     surah: null,
     verse: null,
-    activeTab: 'tafsir',
+    activeTab: 'wordByWord',
     tafsirLoading: false,
     tafsirError: null,
     tafsirText: null,
@@ -110,7 +110,6 @@ function SurahPageRouteComponent() {
         }
     }, [chapters, surah]);
 
-
     const activeSurahVerses = useMemo(() => {
         if (!selectedSurah) return [];
         return verses.filter((v) => v.chapter === selectedSurah);
@@ -144,6 +143,28 @@ function SurahPageRouteComponent() {
         }
         return pages;
     }, [activeSurahVerses]);
+
+    useEffect(() => {
+        if (!tafsir.open || tafsir.surah == null || tafsir.verse == null) return;
+
+        if (
+            tafsir.activeTab === 'tafsir' &&
+            tafsir.tafsirText === null &&
+            !tafsir.tafsirLoading &&
+            !tafsir.tafsirError
+        ) {
+            fetchTafsirText(tafsir.surah, tafsir.verse);
+        }
+
+        if (
+            tafsir.activeTab === 'wordByWord' &&
+            tafsir.words === null &&
+            !tafsir.wordsLoading &&
+            !tafsir.wordsError
+        ) {
+            fetchWordByWord(tafsir.surah, tafsir.verse);
+        }
+    }, [tafsir.open, tafsir.surah, tafsir.verse, tafsir.activeTab, tafsir.tafsirText, tafsir.wordsLoading, tafsir.wordsError, tafsir.tafsirLoading, tafsir.words]);
 
     const totalPages = activeSurahPages.length;
     const safePageIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
@@ -266,15 +287,12 @@ function SurahPageRouteComponent() {
             open: true,
             surah: surahNum,
             verse: verseNum,
-            tafsirLoading: true,
         });
-        fetchTafsirText(surahNum, verseNum);
     };
 
     const closeTafsir = () => {
         setTafsir((prev) => ({ ...prev, open: false }));
     };
-
 
     const tafsirSurahInfo = useMemo(() => {
         if (tafsir.surah == null) return null;
@@ -287,19 +305,7 @@ function SurahPageRouteComponent() {
     }, [tafsir.surah, activeSurahInfo, chapters]);
 
     const switchTab = (tab: TafsirTab) => {
-        setTafsir((prev) => {
-            // Lazily fetch word-by-word data the first time that tab is opened
-            if (
-                tab === 'wordByWord' &&
-                prev.words === null &&
-                !prev.wordsLoading &&
-                prev.surah != null &&
-                prev.verse != null
-            ) {
-                fetchWordByWord(prev.surah, prev.verse);
-            }
-            return { ...prev, activeTab: tab };
-        });
+        setTafsir((prev) => ({ ...prev, activeTab: tab }));
     };
 
     const handleBookmarkToggle = () => {
@@ -380,11 +386,10 @@ function SurahPageRouteComponent() {
                                 onClick={handleBookmarkToggle}
                                 aria-label={bookmarked ? 'إزالة الإشارة المرجعية' : 'إضافة إشارة مرجعية'}
                                 title={bookmarked ? 'إزالة الإشارة المرجعية' : 'حفظ موضع القراءة'}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 ${
-                                    bookmarked
-                                        ? 'bg-accent text-white border-accent shadow-sm shadow-accent/30 hover:bg-accent/90'
-                                        : 'bg-bg-surface text-text-muted border-border-subtle hover:border-accent/40 hover:text-accent'
-                                }`}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-all duration-200 ${bookmarked
+                                    ? 'bg-accent text-white border-accent shadow-sm shadow-accent/30 hover:bg-accent/90'
+                                    : 'bg-bg-surface text-text-muted border-border-subtle hover:border-accent/40 hover:text-accent'
+                                    }`}
                             >
                                 <Bookmark
                                     className="w-4 h-4"
@@ -440,15 +445,6 @@ function SurahPageRouteComponent() {
                             {/* Tabs */}
                             <div className="flex gap-2 mb-4 border-b border-border-subtle">
                                 <button
-                                    onClick={() => switchTab('tafsir')}
-                                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tafsir.activeTab === 'tafsir'
-                                        ? 'border-accent text-accent'
-                                        : 'border-transparent text-text-muted hover:text-text-base'
-                                        }`}
-                                >
-                                    التفسير الميسر
-                                </button>
-                                <button
                                     onClick={() => switchTab('wordByWord')}
                                     className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tafsir.activeTab === 'wordByWord'
                                         ? 'border-accent text-accent'
@@ -457,28 +453,20 @@ function SurahPageRouteComponent() {
                                 >
                                     Word by Word
                                 </button>
+
+                                <button
+                                    onClick={() => switchTab('tafsir')}
+                                    className={`px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${tafsir.activeTab === 'tafsir'
+                                        ? 'border-accent text-accent'
+                                        : 'border-transparent text-text-muted hover:text-text-base'
+                                        }`}
+                                >
+                                    التفسير الميسر
+                                </button>
+
                             </div>
 
                             <div className="overflow-y-auto flex-1">
-                                {tafsir.activeTab === 'tafsir' && (
-                                    <div dir="rtl">
-                                        {tafsir.tafsirLoading && (
-                                            <div className="py-8 text-center text-text-muted">
-                                                جارٍ التحميل...
-                                            </div>
-                                        )}
-                                        {tafsir.tafsirError && (
-                                            <div className="py-8 text-center text-red-500">
-                                                {tafsir.tafsirError}
-                                            </div>
-                                        )}
-                                        {tafsir.tafsirText && (
-                                            <p className="text-base leading-loose text-text-base text-justify">
-                                                {tafsir.tafsirText}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
 
                                 {tafsir.activeTab === 'wordByWord' && (
                                     <div dir="ltr">
@@ -497,16 +485,12 @@ function SurahPageRouteComponent() {
                                                 {tafsir.words.map((word) => (
                                                     <div
                                                         key={word.id}
-                                                        className="flex flex-col items-center bg-bg-base border border-border-subtle rounded-xl px-1 py-2 min-w-[70px]"
+                                                        className="flex flex-col items-center bg-bg-base border border-border-subtle rounded-xl px-1 py-2 min-w-11"
                                                     >
                                                         <span className="font-hafs-uthmanic text-xl text-text-base mb-1">
                                                             {word.arabic}
                                                         </span>
-                                                        {/* {word.transliteration && (
-                                                            <span className="text-xs italic text-text-muted mb-0.5">
-                                                                {word.transliteration}
-                                                            </span>
-                                                        )} */}
+
                                                         {word.translation && (
                                                             <span className="text-xs text-accent">
                                                                 {word.translation}
@@ -515,6 +499,25 @@ function SurahPageRouteComponent() {
                                                     </div>
                                                 ))}
                                             </div>
+                                        )}
+                                    </div>
+                                )}
+                                {tafsir.activeTab === 'tafsir' && (
+                                    <div dir="rtl">
+                                        {tafsir.tafsirLoading && (
+                                            <div className="py-8 text-center text-text-muted">
+                                                جارٍ التحميل...
+                                            </div>
+                                        )}
+                                        {tafsir.tafsirError && (
+                                            <div className="py-8 text-center text-red-500">
+                                                {tafsir.tafsirError}
+                                            </div>
+                                        )}
+                                        {tafsir.tafsirText && (
+                                            <p className="text-base leading-loose text-text-base text-justify">
+                                                {tafsir.tafsirText}
+                                            </p>
                                         )}
                                     </div>
                                 )}
