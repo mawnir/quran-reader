@@ -1,13 +1,14 @@
 import React from 'react';
-import { ArrowRight, BookOpen, Moon, Sun, Bookmark } from 'lucide-react';
+import { ArrowRight, Moon, Sun, Settings } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 
 interface HeaderProps {
   surahTitle?: string | null;
   onGoHome: () => void;
   theme: 'light' | 'dark';
-  onToggleTheme: () => void;
+  onToggleTheme?: () => void;
   bookmark?: boolean;
+  showSettings?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,75 +16,82 @@ export const Header: React.FC<HeaderProps> = ({
   onGoHome,
   theme,
   onToggleTheme,
-  bookmark
+  bookmark,
+  showSettings,
 }) => {
-
   const navigate = useNavigate();
-  const handleBookmark = () => {
-    navigate({
-      to: '/bookmarks',
-    });
-  };
+  const handleSettings = () => navigate({ to: '/settings' });
+
   return (
     <header className="bg-bg-surface/95 backdrop-blur-md border-b border-border-subtle sticky top-0 z-30 shadow-xs">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
         {surahTitle ? (
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-            <button
-              onClick={onGoHome}
-              className="flex items-center justify-center w-10 h-10 rounded-full text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors border border-border-subtle flex-shrink-0"
-              aria-label="الرجوع للقائمة"
-              title="الرجوع لقائمة السور"
-            >
+            <IconButton onClick={onGoHome} label="الرجوع لقائمة السور">
               <ArrowRight className="w-5 h-5" />
-            </button>
+            </IconButton>
 
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 truncate">
-              {bookmark ?
-                <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
-                  {surahTitle}
-                </span>
-                :
-                <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
-                  سورة {surahTitle.replace('سُوْرَةُ ', '')}
-                </span>
-              }
-            </div>
+            <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
+              {bookmark ? surahTitle : `سورة ${surahTitle.replace('سُوْرَةُ ', '')}`}
+            </span>
           </div>
         ) : (
           <div className="grid grid-cols-[auto_1fr_auto] items-center w-full">
-            <button
-              onClick={handleBookmark}
-              className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-accent hover:border-accent/20 hover:bg-accent/10 active:scale-95 transition-all duration-150 flex-shrink-0"
-              aria-label="bookmarks"
-              title="bookmarks"
-            >
-              <Bookmark className="w-5 h-5" />
-            </button>
-
+            <img
+              src="/quran-icon-192.png"
+              alt="quran-logo"
+              className="w-10 h-10 rounded-xl border-2 border-accent/20 p-0.5"
+            />
             <span
-              className="font-bold tracking-tight font-amiri text-green-800 text-lg sm:text-2xl text-center cursor-pointer hover:opacity-90 transition-opacity"
+              className="font-bold tracking-tight font-amiri text-green-800 dark:text-green-500 text-lg sm:text-2xl text-center cursor-pointer hover:opacity-90 transition-opacity"
               onClick={onGoHome}
             >
               القرآن الكريم
             </span>
-
-            <div /> {/* spacer to balance the bookmark button's width */}
+            <div /> {/* spacer to balance the trailing button's width */}
           </div>
         )}
 
-        {/* Theme Toggle */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={onToggleTheme}
-            className="w-10 h-10 flex items-center justify-center cursor-pointer rounded-full border border-border-subtle text-text-muted hover:text-text-heading hover:bg-bg-hover transition-colors flex-shrink-0"
-            aria-label="تغيير المظهر"
-            title="تغيير المظهر"
-          >
-            {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
-          </button>
+          {showSettings ? (
+            <IconButton onClick={handleSettings} label="الإعدادات" variant="accent">
+              <Settings className="w-5 h-5" />
+            </IconButton>
+          ) : (
+            onToggleTheme && (
+              <IconButton onClick={onToggleTheme} label="تغيير المظهر">
+                {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
+              </IconButton>
+            )
+          )}
         </div>
       </div>
     </header>
   );
 };
+
+function IconButton({
+  onClick,
+  label,
+  children,
+  variant = 'default',
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+  variant?: 'default' | 'accent';
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`w-10 h-10 flex items-center justify-center rounded-full border border-border-subtle transition-all duration-150 flex-shrink-0 active:scale-95 ${variant === 'accent'
+        ? 'text-text-muted hover:text-accent hover:border-accent/20 hover:bg-accent/10'
+        : 'text-text-muted hover:text-text-heading hover:bg-bg-hover'
+        }`}
+    >
+      {children}
+    </button>
+  );
+}

@@ -12,7 +12,7 @@ import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
 import { X, Bookmark } from 'lucide-react';
 import { isBookmarked, toggleBookmark } from '../../../utils/bookmarks';
-import { explainWord } from '@/src/services/grokService';
+import { explainWord } from '@/src/services/groqService';
 
 interface HizbEntry {
     hizb: number;

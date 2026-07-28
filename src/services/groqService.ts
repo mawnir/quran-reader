@@ -1,8 +1,13 @@
 import Groq from 'groq-sdk'
 
+/** localStorage key used to persist the user-supplied Groq API key */
+export const GROK_API_KEY_STORAGE = 'groq_api_key'
+
 const getClient = () => {
+    const apiKey =
+        localStorage.getItem(GROK_API_KEY_STORAGE) || ""
     return new Groq({
-        apiKey: import.meta.env.VITE_GROQ_API_KEY,
+        apiKey,
         dangerouslyAllowBrowser: true,
     })
 }
