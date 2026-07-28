@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createFileRoute, useNavigate, useParams, Outlet, useChildMatches } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchSurahInfo, fetchQuranText } from '../../utils/api';
+import { fetchSurahInfo, fetchQuranText } from '../../services/api';
 import { ChapterInfo, Verse } from '../../utils/types';
 import hizbData from '../../data/hizb_data.json';
 import { useTheme } from '../../utils/useTheme';

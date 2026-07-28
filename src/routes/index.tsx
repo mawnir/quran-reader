@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect, useMemo } from 'react';
-import { fetchSurahInfo, fetchQuranText } from '../utils/api';
+import { fetchSurahInfo, fetchQuranText } from '../services/api';
 import { ChapterInfo, Verse } from '../utils/types';
 import { useTheme } from '../utils/useTheme';
 import { normalizeArabic, getSurahSlug } from '../utils/quranUtils';

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
-import { fetchSurahInfo, fetchQuranText } from '../../../utils/api';
+import { fetchSurahInfo, fetchQuranText } from '../../../services/api';
 import { ChapterInfo, Verse } from '../../../utils/types';
 import hizbData from '../../../data/hizb_data.json';
 import { useTheme } from '../../../utils/useTheme';
@@ -12,6 +12,7 @@ import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
 import { X, Bookmark } from 'lucide-react';
 import { isBookmarked, toggleBookmark } from '../../../utils/bookmarks';
+import { explainWord } from '@/src/services/grokService';
 
 interface HizbEntry {
     hizb: number;
@@ -19,6 +20,24 @@ interface HizbEntry {
     surah: number;
     verse: number;
 }
+
+interface WordExplanationState {
+    open: boolean;
+    word: string | null;
+    verseText: string | null;
+    loading: boolean;
+    error: string | null;
+    explanation: string[] | null;
+}
+
+const initialWordExplanationState: WordExplanationState = {
+    open: false,
+    word: null,
+    verseText: null,
+    loading: false,
+    error: null,
+    explanation: null,
+};
 
 type TafsirTab = 'tafsir' | 'wordByWord';
 
@@ -74,6 +93,9 @@ function SurahPageRouteComponent() {
     const [error, setError] = useState<string | null>(null);
     const [selectedSurah, setSelectedSurah] = useState<number | null>(null);
     const [bookmarked, setBookmarked] = useState(false);
+    const [wordExplanation, setWordExplanation] = useState<WordExplanationState>(initialWordExplanationState);
+    const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressFired = useRef(false);
 
     const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
 
@@ -304,6 +326,56 @@ function SurahPageRouteComponent() {
         return chapters.find((c) => c.chapter === tafsir.surah) ?? null;
     }, [tafsir.surah, activeSurahInfo, chapters]);
 
+    const openWordExplanation = async (word: string, verseText: string) => {
+        setWordExplanation({
+            open: true,
+            word,
+            verseText,
+            loading: true,
+            error: null,
+            explanation: null,
+        });
+        try {
+            const explanation = await explainWord(word, verseText, surah);
+            setWordExplanation((prev) => ({ ...prev, loading: false, explanation }));
+        } catch {
+            setWordExplanation((prev) => ({
+                ...prev,
+                loading: false,
+                error: 'تعذر تحميل الشرح. حاول مرة أخرى.',
+            }));
+        }
+    };
+
+    const closeWordExplanation = () => {
+        setWordExplanation((prev) => ({ ...prev, open: false }));
+    };
+
+    const handleWordTouchStart = (word: string, verseText: string) => {
+        longPressFired.current = false;
+        longPressTimer.current = setTimeout(() => {
+            longPressFired.current = true;
+            if (navigator.vibrate) navigator.vibrate(10);
+            openWordExplanation(word, verseText);
+        }, 500);
+    };
+
+    const cancelLongPress = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
+    const handleWordContextMenu = (
+        e: React.MouseEvent,
+        word: string,
+        verseText: string,
+    ) => {
+        e.preventDefault();
+        openWordExplanation(word, verseText);
+    };
+
     const switchTab = (tab: TafsirTab) => {
         setTafsir((prev) => ({ ...prev, activeTab: tab }));
     };
@@ -352,23 +424,32 @@ function SurahPageRouteComponent() {
                                 className="bg-bg-surface border border-border-subtle rounded-2xl p-1 sm:p-8 md:p-12 shadow-xs mb-8"
                             >
                                 <p className="font-hafs-uthmanic font-bold text-2xl sm:text-2xl md:text-3xl leading-[2.3] sm:leading-[2.6] md:leading-[2.8] text-text-base text-justify">
-                                    {versesOnCurrentPage.map((verse) => (
-                                        <React.Fragment key={verse.verse}>
-                                            <span
-                                                className="inline"
-                                            //className="inline cursor-pointer hover:bg-accent/10 rounded transition-colors duration-150"
-                                            //onClick={() => openTafsir(verse.chapter, verse.verse)}
-                                            >
-                                                {verse.text}
-                                            </span>
-                                            <span
-                                                className="inline-flex font-hafs-uthmanic mx-1.5 text-accent text-md cursor-pointer"
-                                                onClick={() => openTafsir(verse.chapter, verse.verse)}
-                                            >
-                                                {new Intl.NumberFormat('ar-EG').format(verse.verse)}
-                                            </span>
-                                        </React.Fragment>
-                                    ))}
+                                    {versesOnCurrentPage.map((verse) => {
+                                        const words = verse.text.trim().split(/\s+/).filter(Boolean);
+                                        return (
+                                            <React.Fragment key={verse.verse}>
+                                                {words.map((w, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="inline rounded transition-colors active:bg-accent/15 select-none"
+                                                        onContextMenu={(e) => handleWordContextMenu(e, w, verse.text)}
+                                                        onTouchStart={() => handleWordTouchStart(w, verse.text)}
+                                                        onTouchEnd={cancelLongPress}
+                                                        onTouchMove={cancelLongPress}
+                                                    >
+                                                        {w}{i < words.length - 1 ? ' ' : ''}
+                                                    </span>
+                                                ))}
+                                                {' '}
+                                                <span
+                                                    className="inline-flex font-hafs-uthmanic mx-1.5 text-accent text-md cursor-pointer"
+                                                    onClick={() => openTafsir(verse.chapter, verse.verse)}
+                                                >
+                                                    {new Intl.NumberFormat('ar-EG').format(verse.verse)}
+                                                </span>
+                                            </React.Fragment>
+                                        );
+                                    })}
                                 </p>
                             </motion.div>
                         </AnimatePresence>
@@ -520,6 +601,64 @@ function SurahPageRouteComponent() {
                                             </p>
                                         )}
                                     </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {wordExplanation.open && (
+                    <motion.div
+                        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={closeWordExplanation}
+                    >
+                        <motion.div
+                            dir="rtl"
+                            className="bg-bg-surface w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl border border-border-subtle p-6 max-h-[70vh] flex flex-col"
+                            initial={{ y: 40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 40, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <p className="font-hafs-uthmanic text-2xl text-accent">
+                                    {wordExplanation.word}
+                                </p>
+                                <button
+                                    onClick={closeWordExplanation}
+                                    className="text-text-muted hover:text-text-base transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="overflow-y-auto flex-1">
+                                {wordExplanation.loading && (
+                                    <div className="py-8 text-center text-text-muted">
+                                        جارٍ التحميل...
+                                    </div>
+                                )}
+                                {wordExplanation.error && (
+                                    <div className="py-8 text-center text-red-500">
+                                        {wordExplanation.error}
+                                    </div>
+                                )}
+                                {wordExplanation.explanation && (
+                                    <ul className="space-y-3">
+                                        {wordExplanation.explanation.map((point, i) => (
+                                            <li
+                                                key={i}
+                                                className="text-base leading-relaxed text-text-base text-justify"
+                                            >
+                                                {point}
+                                            </li>
+                                        ))}
+                                    </ul>
                                 )}
                             </div>
                         </motion.div>
