@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchSurahInfo, fetchQuranText } from '../../../services/api';
@@ -10,7 +10,7 @@ import { Header } from '../../../components/Header';
 import { Pagination } from '../../../components/Pagination';
 import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
-import { X, Bookmark } from 'lucide-react';
+import { X, Bookmark, MoreHorizontal, ChevronRight, MoreVertical } from 'lucide-react';
 import { isBookmarked, toggleBookmark } from '../../../utils/bookmarks';
 import { explainWord } from '@/src/services/groqService';
 
@@ -76,6 +76,30 @@ const initialTafsirState: TafsirState = {
     words: null,
 };
 
+interface WordPopoverState {
+    open: boolean;
+    word: string | null;
+    translation: string | null;
+    loading: boolean;
+    error: string | null;
+    x: number;
+    y: number;
+    surah: number | null;
+    verse: number | null;
+}
+
+const initialWordPopoverState: WordPopoverState = {
+    open: false,
+    word: null,
+    translation: null,
+    loading: false,
+    error: null,
+    x: 0,
+    y: 0,
+    surah: null,
+    verse: null,
+};
+
 export const Route = createFileRoute('/$surah/$page/')({
     component: SurahPageRouteComponent,
 })
@@ -98,6 +122,11 @@ function SurahPageRouteComponent() {
     const longPressFired = useRef(false);
 
     const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
+
+    const [wordPopover, setWordPopover] = useState<WordPopoverState>(initialWordPopoverState);
+    // Caches word-by-word data per "surah:verse" key so re-tapping the same
+    // verse doesn't refire the network request.
+    const verseWordsCache = useRef<Map<string, WordItem[]>>(new Map());
 
     const pageIndex = Math.max(0, parseInt(page || '1', 10) - 1);
 
@@ -196,6 +225,12 @@ function SurahPageRouteComponent() {
         setBookmarked(isBookmarked(surah || '', safePageIndex + 1));
     }, [surah, safePageIndex]);
 
+    // Close any open word popover whenever the page/surah changes so it
+    // doesn't linger over stale content after navigation.
+    useEffect(() => {
+        setWordPopover((prev) => (prev.open ? { ...prev, open: false } : prev));
+    }, [surah, safePageIndex]);
+
     const surahProgressPercent = useMemo(() => {
         if (!totalPages) return 0;
         return Math.round(((safePageIndex + 1) / totalPages) * 100);
@@ -272,26 +307,39 @@ function SurahPageRouteComponent() {
         }
     };
 
+    // Shared parser: normalizes the quran.com verse response into WordItem[].
+    // Used by both the tafsir dialog's word-by-word tab and the tap popover,
+    // and backed by a per-verse cache to avoid duplicate requests.
+    const getVerseWords = useCallback(async (surahNum: number, verseNum: number): Promise<WordItem[]> => {
+        const key = `${surahNum}:${verseNum}`;
+        const cached = verseWordsCache.current.get(key);
+        if (cached) return cached;
+
+        const res = await fetch(
+            `https://api.quran.com/api/v4/verses/by_key/${surahNum}:${verseNum}?words=true&word_fields=text_uthmani,transliteration&word_translation_language=en`
+        );
+        if (!res.ok) throw new Error('network');
+        const data = await res.json();
+        const rawWords = data?.verse?.words as any[] | undefined;
+        if (!rawWords) throw new Error('empty');
+
+        const words: WordItem[] = rawWords
+            .filter((w) => w.char_type_name !== 'end') // drop the ayah-number marker "word"
+            .map((w) => ({
+                id: w.id,
+                arabic: w.text_uthmani ?? w.text ?? '',
+                transliteration: w.transliteration?.text ?? null,
+                translation: w.translation?.text ?? null,
+            }));
+
+        verseWordsCache.current.set(key, words);
+        return words;
+    }, []);
+
     const fetchWordByWord = async (surahNum: number, verseNum: number) => {
         setTafsir((prev) => ({ ...prev, wordsLoading: true, wordsError: null }));
         try {
-            const res = await fetch(
-                `https://api.quran.com/api/v4/verses/by_key/${surahNum}:${verseNum}?words=true&word_fields=text_uthmani,transliteration&word_translation_language=en`
-            );
-            if (!res.ok) throw new Error('network');
-            const data = await res.json();
-            const rawWords = data?.verse?.words as any[] | undefined;
-            if (!rawWords) throw new Error('empty');
-
-            const words: WordItem[] = rawWords
-                .filter((w) => w.char_type_name !== 'end') // drop the ayah-number marker "word"
-                .map((w) => ({
-                    id: w.id,
-                    arabic: w.text_uthmani ?? w.text ?? '',
-                    transliteration: w.transliteration?.text ?? null,
-                    translation: w.translation?.text ?? null,
-                }));
-
+            const words = await getVerseWords(surahNum, verseNum);
             setTafsir((prev) => ({ ...prev, wordsLoading: false, words }));
         } catch (err) {
             console.error(err);
@@ -376,6 +424,60 @@ function SurahPageRouteComponent() {
         openWordExplanation(word, verseText);
     };
 
+    // Quick tap-to-translate popover: shows a small pill with an arrow
+    // pointing at the tapped word, positioned via the word span's own
+    // bounding rect so it works regardless of line wrapping.
+    const closeWordPopover = useCallback(() => {
+        setWordPopover((prev) => (prev.open ? { ...prev, open: false } : prev));
+    }, []);
+
+    const handleWordClick = useCallback(
+        async (
+            e: React.MouseEvent<HTMLSpanElement>,
+            wordIndex: number,
+            surahNum: number,
+            verseNum: number,
+            word: string,
+        ) => {
+            // Long-press already opened the AI explanation dialog for this tap;
+            // don't also pop up the quick-translate pill.
+            if (longPressFired.current) {
+                longPressFired.current = false;
+                return;
+            }
+
+            const rect = e.currentTarget.getBoundingClientRect();
+
+            setWordPopover({
+                open: true,
+                word,
+                translation: null,
+                loading: true,
+                error: null,
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+                surah: surahNum,
+                verse: verseNum,
+            });
+
+            try {
+                const words = await getVerseWords(surahNum, verseNum);
+                const match = words[wordIndex];
+                setWordPopover((prev) =>
+                    prev.open
+                        ? { ...prev, loading: false, translation: match?.translation ?? 'No translation' }
+                        : prev
+                );
+            } catch (err) {
+                console.error(err);
+                setWordPopover((prev) =>
+                    prev.open ? { ...prev, loading: false, error: 'Could not load translation.' } : prev
+                );
+            }
+        },
+        [getVerseWords]
+    );
+
     const switchTab = (tab: TafsirTab) => {
         setTafsir((prev) => ({ ...prev, activeTab: tab }));
     };
@@ -432,6 +534,7 @@ function SurahPageRouteComponent() {
                                                     <span
                                                         key={i}
                                                         className="inline rounded transition-colors active:bg-accent/15 select-none"
+                                                        onClick={(e) => handleWordClick(e, i, verse.chapter, verse.verse, w)}
                                                         onContextMenu={(e) => handleWordContextMenu(e, w, verse.text)}
                                                         onTouchStart={() => handleWordTouchStart(w, verse.text)}
                                                         onTouchEnd={cancelLongPress}
@@ -486,6 +589,69 @@ function SurahPageRouteComponent() {
                     </div>
                 )}
             </main>
+
+            {/* Quick tap-to-translate popover */}
+            <AnimatePresence>
+                {wordPopover.open && (
+                    <>
+                        <div className="fixed inset-0 z-40" onClick={closeWordPopover} />
+                        <div
+                            className="fixed z-50 -translate-x-1/2 -translate-y-full pb-1 pointer-events-none"
+                            style={{
+                                left: wordPopover.x,
+                                top: wordPopover.y,
+                            }}
+                        >
+                            <motion.div
+                                className="pointer-events-auto"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ duration: 0.12 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="relative flex items-center justify-center">
+                                    {/* <button
+                                        onClick={() => {
+                                            closeWordPopover();
+                                            if (wordPopover.surah && wordPopover.verse) {
+                                                openTafsir(wordPopover.surah, wordPopover.verse);
+                                            }
+                                        }}
+                                        aria-label="More options"
+                                        className="absolute right-[calc(100%+6px)] top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white shadow-lg shrink-0"
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button> */}
+
+                                    <div
+                                        className="relative bg-accent text-white cursor-pointer rounded-xl px-3 py-2 shadow-lg flex items-center gap-1.5 whitespace-nowrap"
+                                        dir="ltr"
+                                        onClick={() => {
+                                            closeWordPopover();
+                                            if (wordPopover.surah && wordPopover.verse) {
+                                                openTafsir(wordPopover.surah, wordPopover.verse);
+                                            }
+                                        }}
+                                    >
+                                        {wordPopover.loading && <span className="text-sm">...</span>}
+                                        {wordPopover.error && <span className="text-sm">{wordPopover.error}</span>}
+                                        {!wordPopover.loading && !wordPopover.error && (
+                                            <>
+                                                <span className="text-sm font-medium">
+                                                    {wordPopover.translation}
+                                                </span>
+                                                <ChevronRight size={14} />
+                                            </>
+                                        )}
+                                        <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-accent rotate-45" />
+                                    </div>
+                                </div>
+                            </motion.div>
+                        </div>
+                    </>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {tafsir.open && (
