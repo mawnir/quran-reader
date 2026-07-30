@@ -12,7 +12,7 @@ import { SurahHeader } from '../../../components/SurahHeader';
 import { LoadingState, ErrorState } from '../../../components/States';
 import { X, Bookmark, MoreHorizontal, ChevronRight, MoreVertical } from 'lucide-react';
 import { isBookmarked, toggleBookmark } from '../../../utils/bookmarks';
-import { explainWord } from '@/src/services/groqService';
+import { explainWord, translateEnglishToArabic } from '@/src/services/groqService';
 
 interface HizbEntry {
     hizb: number;
@@ -124,8 +124,6 @@ function SurahPageRouteComponent() {
     const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
 
     const [wordPopover, setWordPopover] = useState<WordPopoverState>(initialWordPopoverState);
-    // Caches word-by-word data per "surah:verse" key so re-tapping the same
-    // verse doesn't refire the network request.
     const verseWordsCache = useRef<Map<string, WordItem[]>>(new Map());
 
     const pageIndex = Math.max(0, parseInt(page || '1', 10) - 1);
@@ -220,13 +218,10 @@ function SurahPageRouteComponent() {
     const totalPages = activeSurahPages.length;
     const safePageIndex = Math.min(pageIndex, Math.max(0, totalPages - 1));
 
-    // Sync bookmark state whenever surah or page changes
     useEffect(() => {
         setBookmarked(isBookmarked(surah || '', safePageIndex + 1));
     }, [surah, safePageIndex]);
 
-    // Close any open word popover whenever the page/surah changes so it
-    // doesn't linger over stale content after navigation.
     useEffect(() => {
         setWordPopover((prev) => (prev.open ? { ...prev, open: false } : prev));
     }, [surah, safePageIndex]);
@@ -307,9 +302,6 @@ function SurahPageRouteComponent() {
         }
     };
 
-    // Shared parser: normalizes the quran.com verse response into WordItem[].
-    // Used by both the tafsir dialog's word-by-word tab and the tap popover,
-    // and backed by a per-verse cache to avoid duplicate requests.
     const getVerseWords = useCallback(async (surahNum: number, verseNum: number): Promise<WordItem[]> => {
         const key = `${surahNum}:${verseNum}`;
         const cached = verseWordsCache.current.get(key);
@@ -324,7 +316,7 @@ function SurahPageRouteComponent() {
         if (!rawWords) throw new Error('empty');
 
         const words: WordItem[] = rawWords
-            .filter((w) => w.char_type_name !== 'end') // drop the ayah-number marker "word"
+            .filter((w) => w.char_type_name !== 'end')
             .map((w) => ({
                 id: w.id,
                 arabic: w.text_uthmani ?? w.text ?? '',
@@ -366,8 +358,6 @@ function SurahPageRouteComponent() {
 
     const tafsirSurahInfo = useMemo(() => {
         if (tafsir.surah == null) return null;
-        // Falls back to a lookup in case the dialog is ever opened for a
-        // surah other than the one currently on screen.
         if (activeSurahInfo && activeSurahInfo.chapter === tafsir.surah) {
             return activeSurahInfo;
         }
@@ -424,9 +414,6 @@ function SurahPageRouteComponent() {
         openWordExplanation(word, verseText);
     };
 
-    // Quick tap-to-translate popover: shows a small pill with an arrow
-    // pointing at the tapped word, positioned via the word span's own
-    // bounding rect so it works regardless of line wrapping.
     const closeWordPopover = useCallback(() => {
         setWordPopover((prev) => (prev.open ? { ...prev, open: false } : prev));
     }, []);
@@ -439,8 +426,6 @@ function SurahPageRouteComponent() {
             verseNum: number,
             word: string,
         ) => {
-            // Long-press already opened the AI explanation dialog for this tap;
-            // don't also pop up the quick-translate pill.
             if (longPressFired.current) {
                 longPressFired.current = false;
                 return;
@@ -477,6 +462,32 @@ function SurahPageRouteComponent() {
         },
         [getVerseWords]
     );
+
+    const handlePopoverTranslateClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!wordPopover.translation || wordPopover.loading) return;
+
+        setWordPopover((prev) => ({ ...prev, loading: true, error: null }));
+
+        try {
+            const arabicTranslation = await translateEnglishToArabic(
+                wordPopover.translation,
+                wordPopover.word || undefined
+            );
+            setWordPopover((prev) =>
+                prev.open
+                    ? { ...prev, loading: false, translation: arabicTranslation }
+                    : prev
+            );
+        } catch (err) {
+            console.error(err);
+            setWordPopover((prev) =>
+                prev.open
+                    ? { ...prev, loading: false, error: 'تعذر الترجمة' }
+                    : prev
+            );
+        }
+    };
 
     const switchTab = (tab: TafsirTab) => {
         setTafsir((prev) => ({ ...prev, activeTab: tab }));
@@ -611,7 +622,7 @@ function SurahPageRouteComponent() {
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className="relative flex items-center justify-center">
-                                    {/* <button
+                                    <button
                                         onClick={() => {
                                             closeWordPopover();
                                             if (wordPopover.surah && wordPopover.verse) {
@@ -619,28 +630,21 @@ function SurahPageRouteComponent() {
                                             }
                                         }}
                                         aria-label="More options"
-                                        className="absolute right-[calc(100%+6px)] top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full bg-accent text-white shadow-lg shrink-0"
+                                        className="absolute right-[calc(100%+2px)] top-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-8.5 rounded-lg bg-accent text-white shadow-lg shrink-0"
                                     >
                                         <MoreVertical size={16} />
-                                    </button> */}
+                                    </button>
 
                                     <div
-                                        className="relative bg-accent text-white cursor-pointer rounded-xl px-3 py-2 shadow-lg flex items-center gap-1.5 whitespace-nowrap"
+                                        onClick={handlePopoverTranslateClick}
+                                        className="relative bg-accent text-white rounded-lg px-3 py-2 shadow-lg flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:bg-accent/90 transition-colors"
                                         dir="ltr"
-                                        onClick={() => {
-                                            closeWordPopover();
-                                            if (wordPopover.surah && wordPopover.verse) {
-                                                openTafsir(wordPopover.surah, wordPopover.verse);
-                                            }
-                                        }}
                                     >
                                         {wordPopover.loading && <span className="text-sm">...</span>}
                                         {wordPopover.error && <span className="text-sm">{wordPopover.error}</span>}
                                         {!wordPopover.loading && !wordPopover.error && (
                                             <>
-                                                <span className="text-sm font-medium">
-                                                    {wordPopover.translation}
-                                                </span>
+                                                <span className="text-sm font-medium">{wordPopover.translation}</span>
                                                 <ChevronRight size={14} />
                                             </>
                                         )}
