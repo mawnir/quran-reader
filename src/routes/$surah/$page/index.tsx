@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { createFileRoute, useNavigate, useParams } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchSurahInfo, fetchQuranText } from '../../../services/api';
@@ -82,8 +82,7 @@ interface WordPopoverState {
     translation: string | null;
     loading: boolean;
     error: string | null;
-    x: number;
-    y: number;
+    targetRect: { x: number; top: number; bottom: number } | null;
     surah: number | null;
     verse: number | null;
 }
@@ -94,10 +93,25 @@ const initialWordPopoverState: WordPopoverState = {
     translation: null,
     loading: false,
     error: null,
-    x: 0,
-    y: 0,
+    targetRect: null,
     surah: null,
     verse: null,
+};
+
+interface PopoverPos {
+    left: number;
+    top: number;
+    isBelow: boolean;
+    arrowLeft: number | null;
+    computed: boolean;
+}
+
+const initialPopoverPos: PopoverPos = {
+    left: 0,
+    top: 0,
+    isBelow: false,
+    arrowLeft: null,
+    computed: false,
 };
 
 export const Route = createFileRoute('/$surah/$page/')({
@@ -124,6 +138,10 @@ function SurahPageRouteComponent() {
     const [tafsir, setTafsir] = useState<TafsirState>(initialTafsirState);
 
     const [wordPopover, setWordPopover] = useState<WordPopoverState>(initialWordPopoverState);
+    const [popoverPos, setPopoverPos] = useState<PopoverPos>(initialPopoverPos);
+    const popoverRef = useRef<HTMLDivElement>(null);
+    const mainBoxRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const verseWordsCache = useRef<Map<string, WordItem[]>>(new Map());
 
     const pageIndex = Math.max(0, parseInt(page || '1', 10) - 1);
@@ -416,7 +434,74 @@ function SurahPageRouteComponent() {
 
     const closeWordPopover = useCallback(() => {
         setWordPopover((prev) => (prev.open ? { ...prev, open: false } : prev));
+        setPopoverPos(initialPopoverPos);
     }, []);
+
+    useLayoutEffect(() => {
+        if (!wordPopover.open || !wordPopover.targetRect || !popoverRef.current || !mainBoxRef.current) return;
+
+        const target = wordPopover.targetRect;
+        const popoverRect = popoverRef.current.getBoundingClientRect();
+        const mainBoxRect = mainBoxRef.current.getBoundingClientRect();
+
+        const padding = 8;
+        const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+
+        const mainWidth = mainBoxRect.width;
+        const popoverHeight = popoverRect.height;
+        const buttonWidthWithGap = buttonRef.current ? buttonRef.current.offsetWidth + 2 : 26;
+
+        // Horizontal (unchanged, this part was fine)
+        const minLeft = padding + buttonWidthWithGap;
+        const maxLeft = Math.max(minLeft, viewportWidth - padding - mainWidth);
+        const idealContainerLeft = target.x - mainWidth / 2;
+        const clampedContainerLeft = Math.max(minLeft, Math.min(maxLeft, idealContainerLeft));
+
+        const arrowOffset = target.x - clampedContainerLeft;
+        const clampedArrowLeft = Math.max(12, Math.min(mainWidth - 12, arrowOffset));
+
+        // Vertical: pick side with more room, then clamp the popover fully inside viewport
+        const spaceAbove = target.top - padding;
+        const spaceBelow = viewportHeight - target.bottom - padding;
+        const isBelow = spaceAbove < popoverHeight && spaceBelow >= spaceAbove;
+
+        let top = isBelow ? target.bottom + 6 : target.top - 6;
+        if (isBelow) {
+            // visible top = top, must not push bottom off-screen
+            top = Math.min(top, viewportHeight - padding - popoverHeight);
+        } else {
+            // container is translateY(-100%), so visible top = top - popoverHeight
+            top = Math.max(top, padding + popoverHeight);
+        }
+
+        setPopoverPos({
+            left: clampedContainerLeft,
+            top,
+            isBelow,
+            arrowLeft: clampedArrowLeft,
+            computed: true,
+        });
+    }, [
+        wordPopover.open,
+        wordPopover.translation,
+        wordPopover.loading,
+        wordPopover.error,
+        wordPopover.targetRect,
+    ]);
+
+    useEffect(() => {
+        if (!wordPopover.open) return;
+        const handleScrollOrResize = () => {
+            closeWordPopover();
+        };
+        window.addEventListener('scroll', handleScrollOrResize, { capture: true, passive: true });
+        window.addEventListener('resize', handleScrollOrResize, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+            window.removeEventListener('resize', handleScrollOrResize);
+        };
+    }, [wordPopover.open, closeWordPopover]);
 
     const handleWordClick = useCallback(
         async (
@@ -439,8 +524,11 @@ function SurahPageRouteComponent() {
                 translation: null,
                 loading: true,
                 error: null,
-                x: rect.left + rect.width / 2,
-                y: rect.top,
+                targetRect: {
+                    x: rect.left + rect.width / 2,
+                    top: rect.top,
+                    bottom: rect.bottom,
+                },
                 surah: surahNum,
                 verse: verseNum,
             });
@@ -607,22 +695,26 @@ function SurahPageRouteComponent() {
                     <>
                         <div className="fixed inset-0 z-40" onClick={closeWordPopover} />
                         <div
-                            className="fixed z-50 -translate-x-1/2 -translate-y-full pb-1 pointer-events-none"
+                            ref={popoverRef}
+                            className={`fixed z-50 pointer-events-none ${popoverPos.computed && !popoverPos.isBelow ? '-translate-y-full' : ''
+                                }`}
                             style={{
-                                left: wordPopover.x,
-                                top: wordPopover.y,
+                                left: `${popoverPos.left}px`,
+                                top: `${popoverPos.top}px`,
+                                opacity: popoverPos.computed ? 1 : 0,
                             }}
                         >
                             <motion.div
                                 className="pointer-events-auto"
                                 initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                animate={{ opacity: popoverPos.computed ? 1 : 0, scale: popoverPos.computed ? 1 : 0.9 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ duration: 0.12 }}
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className="relative flex items-center justify-center">
                                     <button
+                                        ref={buttonRef}
                                         onClick={() => {
                                             closeWordPopover();
                                             if (wordPopover.surah && wordPopover.verse) {
@@ -636,19 +728,30 @@ function SurahPageRouteComponent() {
                                     </button>
 
                                     <div
+                                        ref={mainBoxRef}
                                         onClick={handlePopoverTranslateClick}
-                                        className="relative bg-accent text-white rounded-lg px-3 py-2 shadow-lg flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:bg-accent/90 transition-colors"
+                                        className="relative bg-accent text-white rounded-lg px-3 py-2 shadow-lg flex items-center gap-1.5 whitespace-nowrap cursor-pointer hover:bg-accent/90 transition-colors max-w-[calc(100vw-50px)]"
                                         dir="ltr"
                                     >
                                         {wordPopover.loading && <span className="text-sm">...</span>}
                                         {wordPopover.error && <span className="text-sm">{wordPopover.error}</span>}
                                         {!wordPopover.loading && !wordPopover.error && (
                                             <>
-                                                <span className="text-sm font-medium">{wordPopover.translation}</span>
-                                                <ChevronRight size={14} />
+                                                <span className="text-sm font-medium truncate max-w-[200px] sm:max-w-[300px]">
+                                                    {wordPopover.translation}
+                                                </span>
+                                                <ChevronRight size={14} className="shrink-0" />
                                             </>
                                         )}
-                                        <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 bg-accent rotate-45" />
+                                        <div
+                                            className={`absolute w-3 h-3 bg-accent rotate-45 -translate-x-1/2 ${popoverPos.isBelow ? '-top-1.5' : '-bottom-1.5'
+                                                }`}
+                                            style={{
+                                                left: popoverPos.arrowLeft !== null
+                                                    ? `${popoverPos.arrowLeft}px`
+                                                    : '50%',
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </motion.div>
