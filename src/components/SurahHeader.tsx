@@ -28,9 +28,9 @@ export const SurahHeader: React.FC<SurahHeaderProps> = ({
 
       {showHizbInfo && (
         <div className="flex justify-end ml-4 mb-0.5">
-          <div dir="ltr" className="flex items-center gap-1.5 text-sm font-medium text-text-muted">
-            <span>{new Intl.NumberFormat('ar-EG').format(progressPercent)}٪</span>
-            <span className="w-1 h-1 rounded-full bg-accent opacity-50" />
+          <div dir="ltr" className="flex items-center gap-1.5 text-sm font-medium text-text-base">
+            {/* <span>{new Intl.NumberFormat('ar-EG').format(progressPercent)}٪</span> */}
+            {/* <span className="w-1 h-1 rounded-full bg-accent opacity-50" /> */}
             <span dir="rtl">
               الحزب {new Intl.NumberFormat('ar-EG').format(hizbInfo.hizb)}
               {hizbInfo.quarter !== 1 && (

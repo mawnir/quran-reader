@@ -9,6 +9,7 @@ interface HeaderProps {
   onToggleTheme?: () => void;
   bookmark?: boolean;
   showSettings?: boolean;
+  progressPercent?: number | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleTheme,
   bookmark,
   showSettings,
+  progressPercent,
 }) => {
   const navigate = useNavigate();
   const handleSettings = () => navigate({ to: '/settings' });
@@ -34,6 +36,11 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-lg sm:text-2xl font-bold font-hafs-uthmanic text-accent truncate">
               {bookmark ? surahTitle : `سورة ${surahTitle.replace('سُوْرَةُ ', '')}`}
             </span>
+            {progressPercent != null && (
+              <span className="text-md font-medium text-accent tabular-nums" dir="ltr">
+                {new Intl.NumberFormat('ar-EG').format(progressPercent)}٪
+              </span>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-[auto_1fr_auto] items-center w-full">

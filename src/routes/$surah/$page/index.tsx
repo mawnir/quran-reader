@@ -602,6 +602,7 @@ function SurahPageRouteComponent() {
                 onGoHome={navigateToHome}
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                progressPercent={activeSurahInfo ? surahProgressPercent : null}
             />
 
             <main className="max-w-5xl mx-auto px-3 sm:px-6 pt-4 sm:pt-8 pb-24 w-full flex-1">
