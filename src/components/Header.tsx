@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, Moon, Sun, Settings } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
+import { useSettingsSheet } from '../context/SettingsSheetContext';
 
 interface HeaderProps {
   surahTitle?: string | null;
@@ -23,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const handleSettings = () => navigate({ to: '/settings' });
-
+  const { open } = useSettingsSheet();
   return (
     <header className="bg-bg-surface/95 backdrop-blur-md border-b border-border-subtle sticky top-0 z-30 shadow-xs">
       <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
@@ -60,17 +61,11 @@ export const Header: React.FC<HeaderProps> = ({
         )}
 
         <div className="flex items-center gap-2">
-          {showSettings ? (
-            <IconButton onClick={handleSettings} label="الإعدادات" variant="accent">
-              <Settings className="w-5 h-5" />
-            </IconButton>
-          ) : (
-            onToggleTheme && (
-              <IconButton onClick={onToggleTheme} label="تغيير المظهر">
-                {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5" />}
-              </IconButton>
-            )
-          )}
+
+          <IconButton onClick={open} label="الإعدادات" variant="accent">
+            <Settings className="w-5 h-5" />
+          </IconButton>
+
         </div>
       </div>
     </header>
